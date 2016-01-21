@@ -1,19 +1,18 @@
 ﻿<?xml version="1.0"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
   <metadata>
-    <id>FirstDiagnostic</id>
+    <id>MockIt</id>
     <version>1.0.0.0</version>
-    <title>FirstDiagnostic</title>
-    <authors>FirstDiagnostic</authors>
-    <owners>FirstDiagnostic</owners>
-    <licenseUrl>http://LICENSE_URL_HERE_OR_DELETE_THIS_LINE</licenseUrl>
-    <projectUrl>http://PROJECT_URL_HERE_OR_DELETE_THIS_LINE</projectUrl>
-    <iconUrl>http://ICON_URL_HERE_OR_DELETE_THIS_LINE</iconUrl>
+    <title>MockIt</title>
+    <authors>Yevhen Cherkes</authors>
+    <owners>Yevhen Cherkes</owners>
+    <licenseUrl>http://www.apache.org/licenses/LICENSE-2.0</licenseUrl>
+    <projectUrl>https://github.com/ycherkes/MockIt</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>FirstDiagnostic</description>
-    <releaseNotes>Summary of changes made in this release of the package.</releaseNotes>
+    <description>MockIt</description>
+    <releaseNotes>Created.</releaseNotes>
     <copyright>Copyright</copyright>
-    <tags>FirstDiagnostic, analyzers</tags>
+    <tags>MockIt, analyzers</tags>
     <frameworkAssemblies>
       <frameworkAssembly assemblyName="System" targetFramework="" />
     </frameworkAssemblies>
