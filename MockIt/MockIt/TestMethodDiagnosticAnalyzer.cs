@@ -53,7 +53,7 @@ namespace MockIt
                                 .OfType<MethodDeclarationSyntax>()
                                 .Where(x => x.AttributeLists
                                     .Any(y => y.Attributes
-                                        .Any(z => ((IdentifierNameSyntax) z.Name).Identifier.Text == "TestMethod")));
+                                        .Any(z => new[] { "Test", "TestMethod" }.Contains(((IdentifierNameSyntax) z.Name).Identifier.Text))));
 
             var expressions = methodDecl.SelectMany(x => x.DescendantNodes())
                 .OfType<InvocationExpressionSyntax>()
@@ -67,8 +67,7 @@ namespace MockIt
                                 .OfType<MethodDeclarationSyntax>()
                                 .FirstOrDefault(x => x.AttributeLists
                                     .Any(y => y.Attributes
-                                        .Any(z => ((IdentifierNameSyntax)z.Name).Identifier
-                                            .Text == "TestInitialize")));
+                                        .Any(z => new[] { "TestFixtureSetUp", "TestInitialize" }.Contains(((IdentifierNameSyntax)z.Name).Identifier.Text))));
             if (testInitMethodDecl == null)
                 return;
 
@@ -94,7 +93,7 @@ namespace MockIt
 
                 var refType = symbol.OriginalDefinition.ContainingType;
 
-                var suitableSut = suts.FirstOrDefault(x => (((INamedTypeSymbol)x.SymbolInfo.Symbol).AllInterfaces.Any(y => y == refType)));
+                var suitableSut = suts.FirstOrDefault(x => (((INamedTypeSymbol)x.SymbolInfo.Symbol).AllInterfaces.Any(y => y == refType || y.ConstructedFrom == refType )));
 
                 if (suitableSut == null)
                     continue;
@@ -130,7 +129,7 @@ namespace MockIt
                                         z =>
                                             (z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
                                                                                       .Arguments
-                                                                                      .Any(y => obj.SemanticModel.GetSymbolInfo(y).Symbol.ToString() == x.ReceiverType.ToString()) 
+                                                                                      .Any(y => obj.SemanticModel.GetSymbolInfo(y).Symbol.ToString() == x.ReceiverType.ToString() || (obj.SemanticModel.GetSymbolInfo(y).Symbol as INamedTypeSymbol)?.ConstructedFrom.ToString() == x.ReceiverType.ToString()) 
                                                                                      ?? false)
                                         .SelectMany(z => z.Declaration.Variables.Select(f => f.Identifier.ValueText))
                                         .ToArray()

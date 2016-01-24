@@ -52,8 +52,7 @@ namespace MockIt
                                 .OfType<MethodDeclarationSyntax>()
                                 .FirstOrDefault(x => x.AttributeLists
                                     .Any(y => y.Attributes
-                                        .Any(z => ((IdentifierNameSyntax) z.Name).Identifier
-                                            .Text == "TestInitialize")));
+                                        .Any(z => new[] { "TestFixtureSetUp", "TestInitialize" }.Contains(((IdentifierNameSyntax) z.Name).Identifier.Text))));
 
             var expression = methodDecl?.DescendantNodes()
                                         .OfType<ObjectCreationExpressionSyntax>()

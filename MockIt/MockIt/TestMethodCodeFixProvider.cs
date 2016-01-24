@@ -26,6 +26,7 @@ using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
+//using Toolbelt.DynamicBinderExtension;
 
 namespace MockIt
 {
@@ -68,8 +69,7 @@ namespace MockIt
                                 .OfType<MethodDeclarationSyntax>()
                                 .FirstOrDefault(x => x.AttributeLists
                                     .Any(y => y.Attributes
-                                        .Any(z => ((IdentifierNameSyntax)z.Name).Identifier
-                                            .Text == "TestInitialize")));
+                                        .Any(z => new[] { "TestFixtureSetUp", "TestInitialize" }.Contains(((IdentifierNameSyntax)z.Name).Identifier.Text))));
 
             var declaredFields = testInitMethodDecl.Parent.ChildNodes().OfType<FieldDeclarationSyntax>();
 
@@ -89,7 +89,7 @@ namespace MockIt
 
             var refType = symbol.OriginalDefinition.ContainingType;
 
-            var suitableSut = suts.FirstOrDefault(x => (((INamedTypeSymbol)x.SymbolInfo.Symbol).AllInterfaces.Any(y => y == refType)));
+            var suitableSut = suts.FirstOrDefault(x => (((INamedTypeSymbol)x.SymbolInfo.Symbol).AllInterfaces.Any(y => y == refType || y.ConstructedFrom == refType)));
 
             
             var suitableSutMember = ((INamedTypeSymbol)suitableSut.SymbolInfo.Symbol).FindImplementationForInterfaceMember(symbol);
@@ -122,7 +122,7 @@ namespace MockIt
                                     z =>
                                         (z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
                                                                                   .Arguments
-                                                                                  .Any(y => semanticModel.GetSymbolInfo(y).Symbol.ToString() == x.ReceiverType.ToString())
+                                                                                  .Any(y => IsCorrespondingType(semanticModel, y, x))
                                                                                  ?? false)
                                     .SelectMany(z => z.Declaration.Variables.Select(f => f.Identifier.ValueText))
                                     .ToArray()
@@ -140,6 +140,16 @@ namespace MockIt
             editor.InsertAfter(creation, verifiers.Select(x => x.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.ElasticMarker))));
 
             return editor.GetChangedDocument();
+        }
+
+        private static bool IsCorrespondingType(SemanticModel semanticModel, ExpressionSyntax y, IMethodSymbol x)
+        {
+            var symbol = semanticModel.GetSymbolInfo(y).Symbol;
+ //           var typeMap = symbol.ToDynamic().TypeMap;
+
+            //todo for generics have to determine the substitutions it are in the private property ConstructedNamedTypeSymbol.TypeMap
+            return symbol.ToString() == x.ReceiverType.ToString() || 
+                   (symbol as INamedTypeSymbol)?.ConstructedFrom.ToString() == x.ReceiverType.ToString();
         }
     }
 }
