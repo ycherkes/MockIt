@@ -20,6 +20,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
@@ -143,10 +144,8 @@ namespace MockIt
                                         z =>
                                             // todo make corresponding variables determination without name equality ( sut.varname + "Mock" === test.mockVarName )
                                             // should be removed
-                                            z.Declaration.Variables[0].ToString() == ((MemberAccessExpressionSyntax)x.Expression).Expression.ToString() + "Mock" && ((z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
-                                                                                      .Arguments
-                                                                                      .Any(y => IsCorrespondingType(semanticModel, y, x.Symbol))
-                                                                                     ?? false))
+                                            //z.Declaration.Variables[0].ToString() == ((MemberAccessExpressionSyntax)x.Expression).Expression.ToString() + "Mock" && 
+                                            ((z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList.Arguments.Any(y => IsCorrespondingType(semanticModel, y, x.Symbol, sutSubstitutions)) ?? false))
                                         .Select(z => new FieldsSetups
                                         {
                                             Field = z.Declaration.Variables.Select(f => f.Identifier.ValueText),
@@ -233,22 +232,39 @@ namespace MockIt
                     : z);
         }
 
-        private static bool IsCorrespondingType(SemanticModel semanticModel, ExpressionSyntax y, ISymbol x)
+        private static bool IsCorrespondingType(SemanticModel semanticModel, ExpressionSyntax y, ISymbol x, IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
         {
             var symbol = semanticModel.GetSymbolInfo(y).Symbol;
 
             var methodSymbol = x as IMethodSymbol;
             var propertySymbol = x as IPropertySymbol;
 
-            if(methodSymbol != null)
-                return symbol.ToString() == methodSymbol.ReceiverType.ToString() || 
-                                             (symbol as INamedTypeSymbol)?.OriginalDefinition.ToString() == methodSymbol.ReceiverType.OriginalDefinition.ToString();
-            else
+            if (methodSymbol != null)
             {
-                return symbol.ToString() == propertySymbol.ContainingType.ToString() ||
-                                             (symbol as INamedTypeSymbol)?.OriginalDefinition.ToString() == propertySymbol.ContainingType.OriginalDefinition.ToString();
+                var methodDefinitionsReplacement = GetReplacedDefinitions(sutSubstitutions, methodSymbol);
+                return symbol.ToString() == methodSymbol.ReceiverType.ToString() ||
+                       methodDefinitionsReplacement.Contains(symbol.ToString());
             }
+            var propertyDefinitionsReplacement = GetReplacedDefinitions(sutSubstitutions, propertySymbol);
 
+            return symbol.ToString() == propertySymbol.ContainingType.ToString() ||
+                   propertyDefinitionsReplacement.Contains(symbol.ToString());
+        }
+
+        private static IEnumerable<string> GetReplacedDefinitions(IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions, ISymbol propertySymbol)
+        {
+            var replacements = sutSubstitutions.Select(kv => new[]
+            {
+                new {Original = "<" + kv.Key + ">", Replacement = "<" + kv.Value + ">"},
+                new {Original = "<" + kv.Key + ",", Replacement = "<" + kv.Value + ","},
+                new {Original = ", " + kv.Key + ",", Replacement = ", " + kv.Value + ","},
+                new {Original = ", " + kv.Key + ">", Replacement = ", " + kv.Value + ">"}
+            });
+
+            var originalType = propertySymbol.ContainingType.ToString();
+
+            var replacedDefinition = replacements.Select(s => s.Aggregate(originalType, (sum, repl) => sum.Replace(repl.Original, repl.Replacement)));
+            return replacedDefinition;
         }
 
         private static IEnumerable<KeyValuePair<ITypeParameterSymbol, ITypeSymbol>> GetSubstitutions(SemanticModel semanticModel, ExpressionSyntax y)
