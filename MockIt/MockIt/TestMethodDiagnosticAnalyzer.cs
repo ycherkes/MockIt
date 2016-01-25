@@ -30,7 +30,7 @@ namespace MockIt
     {
         public const string DiagnosticId = "MockItMethod";
         internal const string Category = "Usage";
-        // You can change these strings in the Resources.resx file. If you do not want your analyzer to be localize-able, you can use regular strings for Title and MessageFormat.
+        
         internal static readonly LocalizableString Title = new LocalizableResourceString(nameof(Resources.AnalyzerTitle), Resources.ResourceManager, typeof (Resources));
 
         internal static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(Resources.AnalyzerMessageFormat), Resources.ResourceManager, typeof (Resources));
@@ -56,7 +56,8 @@ namespace MockIt
                                         .Any(z => new[] { "Test", "TestMethod" }.Contains(((IdentifierNameSyntax) z.Name).Identifier.Text))));
 
             var expressions = methodDecl.SelectMany(x => x.DescendantNodes())
-                .OfType<InvocationExpressionSyntax>()
+                .OfType<ExpressionSyntax>()
+                .Where(x => x is InvocationExpressionSyntax || x is MemberAccessExpressionSyntax)
                 .ToArray();
 
             if (!expressions.Any())
@@ -83,10 +84,14 @@ namespace MockIt
                 .Where(x => x.DeclaredFields.Any())
                 .ToArray();
 
-            foreach (var invExpr in expressions)
+            foreach (var expr in expressions)
             {
+                var memberAccess = expr as MemberAccessExpressionSyntax;
+                var invokationExpression = expr as InvocationExpressionSyntax;
 
-                var symbol = (IMethodSymbol)obj.SemanticModel.GetSymbolInfo(invExpr.Expression).Symbol;
+                var expression = invokationExpression == null ? memberAccess : invokationExpression.Expression;
+
+                var symbol = obj.SemanticModel.GetSymbolInfo(expression).Symbol;
 
                 if(symbol == null)
                     continue;
@@ -103,7 +108,7 @@ namespace MockIt
                 var sourceTree = suitableSutMember.Locations.First().SourceTree;
                 var treeRoot = sourceTree.GetRoot();
                 var position = suitableSutMember.Locations.First().SourceSpan.Start;
-                var node = treeRoot.FindToken(position).Parent.FirstAncestorOrSelf<MethodDeclarationSyntax>();
+                var node = treeRoot.FindToken(position).Parent.FirstAncestorOrSelf<MethodDeclarationSyntax>() as MemberDeclarationSyntax ?? treeRoot.FindToken(position).Parent.FirstAncestorOrSelf<PropertyDeclarationSyntax>();
 
                 var compilation = symbol.ContainingAssembly.Name == obj.SemanticModel.Compilation.Assembly.Name
                             ? obj.SemanticModel.Compilation
@@ -114,10 +119,14 @@ namespace MockIt
                 var model = compilation.GetSemanticModel(sourceTree);
 
 
-                //todo = work with another semanticModel (not in this file)
-                var invokedMethodsOfMocks = node.DescendantNodes()
+                var invokedMethodsOfMocks = node.DescendantNodes().OfType<MemberAccessExpressionSyntax>().SelectMany(
+                    x =>
+                    {
+                        var symb = model.GetSymbolInfo(x).Symbol as IPropertySymbol;
+                        return symb != null ? new[] {symb.GetMethod, symb.SetMethod} : Enumerable.Empty<IMethodSymbol>();
+                    }).Concat( node.DescendantNodes()
                     .OfType<InvocationExpressionSyntax>()
-                    .Select(x => (IMethodSymbol)model.GetSymbolInfo(x.Expression).Symbol)
+                    .Select(x => (IMethodSymbol)model.GetSymbolInfo(x.Expression).Symbol))
                     .Where(x => x != null)
                     .Select(
                         x =>
@@ -136,19 +145,19 @@ namespace MockIt
                             })
                     .Where(x => x.FieldsToSetup.Any())
                     .ToArray();
+                
 
 
-                if(invokedMethodsOfMocks.Length == 0 || Parents(invExpr, n => n is BlockSyntax)?.DescendantNodes()
+                if (invokedMethodsOfMocks.Length == 0 || Parents(expr, n => n is BlockSyntax)?.DescendantNodes()
                                                                .OfType<InvocationExpressionSyntax>()
                                                                .Select(x => x.ToString())
                                                                .Any(x => invokedMethodsOfMocks.SelectMany(y => y.FieldsToSetup)
                                                                                               .Any(e => x.StartsWith(e + ".Setup"))) == true)
-                { 
+                {
                     continue;
                 }
 
-
-                obj.ReportDiagnostic(Diagnostic.Create(Rule, invExpr.Parent.GetLocation()));
+                obj.ReportDiagnostic(Diagnostic.Create(Rule, expr.Parent.GetLocation()));
             }
         }
 
