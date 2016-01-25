@@ -132,19 +132,21 @@ namespace MockIt
             var invoks = invoks1.Concat(invoks2).ToArray();
 
                 var invokedMethodsOfMocks = invoks
-                    .Select(x => model.GetSymbolInfo(x).Symbol)
+                    .Select(x => new { model.GetSymbolInfo(x).Symbol, Expression = x})
                     .Select(
                         x =>
                             new Fields
                             {
-                                MethodOrPropertySymbol = x,
+                                MethodOrPropertySymbol = x.Symbol,
                                 FieldsToSetup =
                                     suitableSut.DeclaredFields.Where(
                                         z =>
-                                            (z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
+                                            // todo make corresponding variables determination without name equality ( sut.varname + "Mock" === test.mockVarName )
+                                            // should be removed
+                                            z.Declaration.Variables[0].ToString() == ((MemberAccessExpressionSyntax)x.Expression).Expression.ToString() + "Mock" && ((z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
                                                                                       .Arguments
-                                                                                      .Any(y => IsCorrespondingType(semanticModel, y, x))
-                                                                                     ?? false)
+                                                                                      .Any(y => IsCorrespondingType(semanticModel, y, x.Symbol))
+                                                                                     ?? false))
                                         .Select(z => new FieldsSetups
                                         {
                                             Field = z.Declaration.Variables.Select(f => f.Identifier.ValueText),
