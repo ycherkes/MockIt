@@ -15,9 +15,13 @@
 // 
 // The latest version of this file can be found at https://github.com/ycherkes/MockIt
 #endregion
+
+using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
@@ -117,24 +121,41 @@ namespace MockIt
                         new
                         {
                             MethodSymbol = x,
-                            FieldsToSetup =
+                            FieldsToSetup = 
                                 suitableSut.DeclaredFields.Where(
                                     z =>
                                         (z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
                                                                                   .Arguments
                                                                                   .Any(y => IsCorrespondingType(semanticModel, y, x))
                                                                                  ?? false)
-                                    .SelectMany(z => z.Declaration.Variables.Select(f => f.Identifier.ValueText))
+                                    .Select(z => new
+                                    {
+                                            Field = z.Declaration.Variables.Select(f => f.Identifier.ValueText),
+                                            Substitutions = (z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
+                                                                                 .Arguments.Select(y => GetSubstitutions(semanticModel, y))
+                                                                                 .SelectMany(s => s)
+                                                                                 .ToDictionary(s => s.Key.ToString(), s => s.Value)
+                                    })
                                     .ToArray()
                         })
                 .Where(x => x.FieldsToSetup.Any())
                 .ToArray();
 
-            var setups = invokedMethodsOfMocks.SelectMany(x => x.FieldsToSetup.Select(y => y + ".#ToReplace#(x => x." + x.MethodSymbol.Name + "(" + string.Join(", ", x.MethodSymbol.Parameters.Select(z => "It.Is<" + FriendlyNamesHelper.GetSimpleTypeName(z.Type) + ">(" + z.Name + " => " + z.Name + " == default(" + FriendlyNamesHelper.GetSimpleTypeName(z.Type) + "))")) + "))" + (x.MethodSymbol.ReturnType.ToDisplayString() != "void" ? ".Returns(default(" + FriendlyNamesHelper.GetSimpleTypeName(x.MethodSymbol.ReturnType) + "))" : "" )))
-                                              .Select(x => SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(x.Replace("#ToReplace#", "Setup"))))
-                                              .ToArray();
+            var setups = invokedMethodsOfMocks.SelectMany(x => x.FieldsToSetup
+            .SelectMany(y => y.Field.Select(f => f +".#ToReplace#(x => x." + 
+            x.MethodSymbol.Name + "(" + 
+            string.Join(", ", x.MethodSymbol.Parameters.Select(z => "It.Is<" + 
+            GetSimpleTypeName(y.Substitutions, z.Type) +
+            ">(" + z.Name + " => " + z.Name + " == default(" +
+            GetSimpleTypeName(y.Substitutions, z.Type) +
+            "))")) + "))" + (x.MethodSymbol.ReturnType.ToDisplayString() != "void" ? ".Returns(default(" +
+            GetSimpleTypeName(y.Substitutions, x.MethodSymbol.ReturnType) +
+            "))" : ""))))
+            .Distinct()
+            .Select(x => SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(x.Replace("#ToReplace#", "Setup"))))
+            .ToArray();
 
-            var verifiers = invokedMethodsOfMocks.SelectMany(x => x.FieldsToSetup).Distinct().Select(x => SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(x + ".VerifyAll()")));
+            var verifiers = invokedMethodsOfMocks.SelectMany(x => x.FieldsToSetup.SelectMany(y => y.Field)).Distinct().Select(x => SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(x + ".VerifyAll()")));
 
             editor.InsertBefore(creation, setups.Select(x => x.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.ElasticMarker))));
             editor.InsertAfter(creation, verifiers.Select(x => x.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.ElasticMarker))));
@@ -142,14 +163,41 @@ namespace MockIt
             return editor.GetChangedDocument();
         }
 
+        private static string GetSimpleTypeName(IReadOnlyDictionary<string, ITypeSymbol> substitutions, ITypeSymbol z)
+        {
+            ITypeSymbol substitution;
+
+            return FriendlyNamesHelper.GetSimpleTypeName(substitutions.TryGetValue(z.ToString(), out substitution)
+                ? substitution
+                : z);
+        }
+
         private static bool IsCorrespondingType(SemanticModel semanticModel, ExpressionSyntax y, IMethodSymbol x)
         {
             var symbol = semanticModel.GetSymbolInfo(y).Symbol;
- //           var typeMap = symbol.ToDynamic().TypeMap;
-
             //todo for generics have to determine the substitutions it are in the private property ConstructedNamedTypeSymbol.TypeMap
             return symbol.ToString() == x.ReceiverType.ToString() || 
                    (symbol as INamedTypeSymbol)?.ConstructedFrom.ToString() == x.ReceiverType.ToString();
+        }
+
+        private static IEnumerable<KeyValuePair<ITypeParameterSymbol, ITypeSymbol>> GetSubstitutions(SemanticModel semanticModel, ExpressionSyntax y)
+        {
+            var symbol = semanticModel.GetSymbolInfo(y).Symbol;
+            var namedTypeSymbol = symbol as INamedTypeSymbol;
+
+            var emptyDictionary = new Dictionary<ITypeParameterSymbol, ITypeSymbol>();
+
+            if (namedTypeSymbol == null) return emptyDictionary;
+            var typeParameters = namedTypeSymbol.TypeParameters;
+            var typeArguments = namedTypeSymbol.TypeArguments;
+
+            if (typeParameters.Length == 0 || typeArguments.Length == 0)
+                return emptyDictionary;
+
+            var typeMap = typeParameters.Zip(typeArguments, (parameterSymbol, typeSymbol) => new { Key = parameterSymbol, Value = typeSymbol })
+                                        .ToDictionary(pair => pair.Key, pair => pair.Value);
+
+            return typeMap;
         }
     }
 }

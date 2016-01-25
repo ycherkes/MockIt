@@ -93,7 +93,7 @@ namespace MockIt
 
                 var refType = symbol.OriginalDefinition.ContainingType;
 
-                var suitableSut = suts.FirstOrDefault(x => (((INamedTypeSymbol)x.SymbolInfo.Symbol).AllInterfaces.Any(y => y == refType || y.ConstructedFrom == refType )));
+                var suitableSut = suts.FirstOrDefault(x => (x.SymbolInfo.Symbol as INamedTypeSymbol) != null && (((INamedTypeSymbol) x.SymbolInfo.Symbol).AllInterfaces.Any(y => y == refType || y.ConstructedFrom == refType )));
 
                 if (suitableSut == null)
                     continue;
