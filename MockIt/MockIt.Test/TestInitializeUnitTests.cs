@@ -106,6 +106,7 @@ namespace MockIt.Test
                     public void Init()
                     {
             subServiceMock = new Mock<ISubService>();
+
             sut = new Service(subServiceMock.Object);
                     }
             
@@ -234,6 +235,7 @@ namespace MockIt.Test
                     public void Init()
                     {
             subServiceMock = new Mock<ISubService<string>>();
+
             sut = new Service(subServiceMock.Object);
                     }
             

@@ -53,12 +53,23 @@ namespace MockIt
                                 .OfType<MethodDeclarationSyntax>()
                                 .Where(x => x.AttributeLists
                                     .Any(y => y.Attributes
-                                        .Any(z => new[] { "Test", "TestMethod" }.Contains(((IdentifierNameSyntax) z.Name).Identifier.Text))));
+                                        .Any(z => new[] { "Test", "TestMethod" }.Contains(((IdentifierNameSyntax) z.Name).Identifier.Text)))).ToArray();
 
-            var expressions = methodDecl.SelectMany(x => x.DescendantNodes())
-                .OfType<ExpressionSyntax>()
-                .Where(x => x is InvocationExpressionSyntax || x is MemberAccessExpressionSyntax)
+            //var expressions = methodDecl.SelectMany(x => x.DescendantNodes())
+            //    .OfType<ExpressionSyntax>()
+            //    .Where(x => x is InvocationExpressionSyntax || x is MemberAccessExpressionSyntax)
+            //    .ToArray();
+
+            var invoks1 = methodDecl.SelectMany(x => x.DescendantNodes())
+                .OfType<InvocationExpressionSyntax>()
+                .Select(expr => expr.Expression).ToArray();
+
+            var invoks2 = methodDecl.SelectMany(x => x.DescendantNodes())
+                .OfType<MemberAccessExpressionSyntax>()
+                .Where(expr => !expr.DescendantNodes(x => invoks1.Contains(x)).Any())
                 .ToArray();
+
+            var expressions = invoks1.Concat(invoks2).ToArray();
 
             if (!expressions.Any())
                 return;
@@ -84,13 +95,8 @@ namespace MockIt
                 .Where(x => x.DeclaredFields.Any())
                 .ToArray();
 
-            foreach (var expr in expressions)
+            foreach (var expression in expressions)
             {
-                var memberAccess = expr as MemberAccessExpressionSyntax;
-                var invokationExpression = expr as InvocationExpressionSyntax;
-
-                var expression = invokationExpression == null ? memberAccess : invokationExpression.Expression;
-
                 var symbol = obj.SemanticModel.GetSymbolInfo(expression).Symbol;
 
                 if(symbol == null)
@@ -148,7 +154,7 @@ namespace MockIt
                 
 
 
-                if (invokedMethodsOfMocks.Length == 0 || Parents(expr, n => n is BlockSyntax)?.DescendantNodes()
+                if (invokedMethodsOfMocks.Length == 0 || Parents(expression, n => n is BlockSyntax)?.DescendantNodes()
                                                                .OfType<InvocationExpressionSyntax>()
                                                                .Select(x => x.ToString())
                                                                .Any(x => invokedMethodsOfMocks.SelectMany(y => y.FieldsToSetup)
@@ -157,7 +163,7 @@ namespace MockIt
                     continue;
                 }
 
-                obj.ReportDiagnostic(Diagnostic.Create(Rule, expr.Parent.GetLocation()));
+                obj.ReportDiagnostic(Diagnostic.Create(Rule, expression.Parent.GetLocation()));
             }
         }
 
