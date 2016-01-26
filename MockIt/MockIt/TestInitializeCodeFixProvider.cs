@@ -123,7 +123,7 @@ namespace MockIt
                             .Take(changes.Length * 2 - 1);
 
             editor.InsertBefore(creation.Parent.Parent, changes.Select(x => x.NewField));
-            editor.InsertBefore(creation, changes.Select(x => x.NewExpression));
+            editor.InsertBefore(creation, changes.Select((x, i) => changes.Length - 1 == i ? x.NewExpression.WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed, SyntaxFactory.CarriageReturnLineFeed)) : x.NewExpression));
             editor.ReplaceNode(creationExpressionSyntax.ArgumentList, SyntaxFactory.ArgumentList(SyntaxFactory.SeparatedList<ArgumentSyntax>(arguments)));
 
             return editor.GetChangedDocument();

@@ -163,12 +163,14 @@ namespace MockIt
                 .SelectMany(y => y.Field.Select(f => GetSetups(f, x, y))))
                 .SelectMany(x => x)
                 .Distinct()
-                .Select(x => SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(x.Replace("#ToReplace#", "Setup").Replace("#ToReplaceGet#", "SetupGet").Replace("#ToReplaceSet#", "SetupSet"))));
-           
+                .Select(x => SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(x.Replace("#ToReplace#", "Setup").Replace("#ToReplaceGet#", "SetupGet").Replace("#ToReplaceSet#", "SetupSet"))))
+                .ToArray();
 
-            var verifiers = invokedMethodsOfMocks.SelectMany(x => x.FieldsToSetup.SelectMany(y => y.Field)).Distinct().Select(x => SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(x + ".VerifyAll()")));
+            var verifiers = invokedMethodsOfMocks.SelectMany(x => x.FieldsToSetup.SelectMany(y => y.Field)).Distinct().Select(x => SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(x + ".VerifyAll()"))).ToArray();
 
-            editor.InsertBefore(invokationSyntax, setups.Select(x => x.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.ElasticMarker))));
+            editor.InsertBefore(invokationSyntax, setups.Select((x, i) => setups.Length - 1 == i ? x.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.ElasticMarker)).WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed, SyntaxFactory.CarriageReturnLineFeed)) : x.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.ElasticMarker))));
+
+            //todo make a new line before verifiers
             editor.InsertAfter(invokationSyntax, verifiers.Select(x => x.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.ElasticMarker))));
 
             return editor.GetChangedDocument();
