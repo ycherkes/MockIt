@@ -170,8 +170,8 @@ namespace MockIt
 
             editor.InsertBefore(invokationSyntax, setups.Select((x, i) => setups.Length - 1 == i ? x.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.ElasticMarker)).WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed, SyntaxFactory.CarriageReturnLineFeed)) : x.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.ElasticMarker))));
 
-            //todo make a new line before verifiers
-            editor.InsertAfter(invokationSyntax, verifiers.Select(x => x.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.ElasticMarker))));
+            //todo will try to understand why new line adds so difficult way
+            editor.InsertAfter(invokationSyntax, verifiers.Select(x => x.WithLeadingTrivia(SyntaxFactory.TriviaList(new[] {SyntaxFactory.CarriageReturnLineFeed}.Concat(invokationSyntax.GetLeadingTrivia())))));
 
             return editor.GetChangedDocument();
         }
