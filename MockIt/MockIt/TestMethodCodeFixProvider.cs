@@ -70,7 +70,7 @@ namespace MockIt
                                 .OfType<MethodDeclarationSyntax>()
                                 .FirstOrDefault(x => x.AttributeLists
                                     .Any(y => y.Attributes
-                                        .Any(z => new[] { "TestFixtureSetUp", "TestInitialize" }.Contains(((IdentifierNameSyntax)z.Name).Identifier.Text))));
+                                        .Any(z => new[] { "TestFixtureSetUp", "SetUp", "TestInitialize" }.Contains(((IdentifierNameSyntax)z.Name).Identifier.Text))));
 
             var declaredFields = testInitMethodDecl.Parent.ChildNodes().OfType<FieldDeclarationSyntax>();
 
@@ -103,7 +103,7 @@ namespace MockIt
 
                 var suitableSut = suts.FirstOrDefault(x => (((INamedTypeSymbol)x.SymbolInfo.Symbol).AllInterfaces.Any(y => y.ToString() == refType.ToString() || y.ConstructedFrom == refType)));
 
-               var sutSubstitutions = GetSubstitutions(refType).ToDictionary(x => x.Key.ToString(), x => x.Value);
+               var sutSubstitutions = GetSubstitutions(refType);
 
                 var suitableSutMember = ((INamedTypeSymbol)suitableSut.SymbolInfo.Symbol).FindImplementationForInterfaceMember(symbol);
 
@@ -142,7 +142,7 @@ namespace MockIt
                                     suitableSut.DeclaredFields.Where(
                                         z =>
                                             // todo make corresponding variables determination without name equality ( sut.varname + "Mock" === test.mockVarName )
-                                            // should be removed
+                                            // removed
                                             //z.Declaration.Variables[0].ToString() == ((MemberAccessExpressionSyntax)x.Expression).Expression.ToString() + "Mock" && 
                                             ((z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList.Arguments.Any(y => IsCorrespondingType(semanticModel, y, x.Symbol, sutSubstitutions)) ?? false))
                                         .Select(z => new FieldsSetups
@@ -151,7 +151,7 @@ namespace MockIt
                                             Substitutions = (z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
                                                                                      .Arguments.Select(y => GetSubstitutions(semanticModel, y))
                                                                                      .SelectMany(s => s)
-                                                                                     .ToDictionary(s => s.Key.ToString(), s => s.Value),
+                                                                                     .ToDictionary(s => s.Key, s => s.Value),
                                             SutSubstitutions = sutSubstitutions
                                         })
                                         .ToArray()
@@ -266,17 +266,17 @@ namespace MockIt
             return replacedDefinition;
         }
 
-        private static IEnumerable<KeyValuePair<ITypeParameterSymbol, ITypeSymbol>> GetSubstitutions(SemanticModel semanticModel, ExpressionSyntax y)
+        private static Dictionary<string, ITypeSymbol> GetSubstitutions(SemanticModel semanticModel, ExpressionSyntax y)
         {
             var symbol = semanticModel.GetSymbolInfo(y).Symbol;
             return GetSubstitutions(symbol);
         }
 
-        private static IEnumerable<KeyValuePair<ITypeParameterSymbol, ITypeSymbol>> GetSubstitutions(ISymbol symbol)
+        private static Dictionary<string, ITypeSymbol> GetSubstitutions(ISymbol symbol)
         {
             var namedTypeSymbol = symbol as INamedTypeSymbol;
 
-            var emptyDictionary = new Dictionary<ITypeParameterSymbol, ITypeSymbol>();
+            var emptyDictionary = new Dictionary<string, ITypeSymbol>();
 
             if (namedTypeSymbol == null) return emptyDictionary;
             var typeParameters = namedTypeSymbol.TypeParameters;
@@ -287,7 +287,7 @@ namespace MockIt
 
             var typeMap = typeParameters.Zip(typeArguments,
                 (parameterSymbol, typeSymbol) => new {Key = parameterSymbol, Value = typeSymbol})
-                .ToDictionary(pair => pair.Key, pair => pair.Value);
+                .ToDictionary(pair => pair.Key.ToString(), pair => pair.Value);
 
             return typeMap;
         }

@@ -22,6 +22,11 @@ namespace ConsoleApplication2
                 var secondRes = class2.Foo;
                 return new Tuple<T, T1>(secondRes, firstRes);
             }
+            set
+            {
+                class3.Foo = value.Item2;
+                class2.Foo = value.Item1;
+            }
         }
 
         public Tuple<T, T1> Foo(T a, T1 b)
