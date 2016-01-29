@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ConsoleApplication2;
 using Moq;
@@ -9,12 +10,12 @@ namespace UnitTestProject1
     [TestClass]
     public class UnitTest1
     {
-        private IClass1<int, bool> sut;
+        private IClass1<List<string>, Dictionary<int, string>> sut;
 
         [SetUp]
         public void Init()
         {
-            sut = new Class1<int, bool>();
+            sut = new Class1<List<string>, Dictionary<int, string>>();
         }
 
         [Test]
@@ -26,7 +27,13 @@ namespace UnitTestProject1
         [Test]
         public void TestProp()
         {
-            sut.Foo(5, true);
+            var res = sut.Foo(new List<string>(), new Dictionary<int, string>());
+        }
+
+        [TestMethod]
+        public void TestParameterizedGenericMethod()
+        {
+            var res = sut.Foo(long.MaxValue, new List<string>());
         }
     }
 }

@@ -111,6 +111,19 @@ namespace MockIt
 
                 var suitableSutMember = ((INamedTypeSymbol)suitableSut.SymbolInfo.Symbol).FindImplementationForInterfaceMember(symbol);
 
+                //for parameterized generic method
+                if (suitableSutMember == null)
+                {
+                    var s1 = symbol as IMethodSymbol;
+                    if(s1?.ConstructedFrom == null)
+                        continue;
+
+                    suitableSutMember =
+                        ((INamedTypeSymbol) suitableSut.SymbolInfo.Symbol).FindImplementationForInterfaceMember(s1.ConstructedFrom);
+                }
+
+                if (suitableSutMember == null) continue;
+
                 var sourceTree = suitableSutMember.Locations.First().SourceTree;
                 var treeRoot = sourceTree.GetRoot();
                 var position = suitableSutMember.Locations.First().SourceSpan.Start;

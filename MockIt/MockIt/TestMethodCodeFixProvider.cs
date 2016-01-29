@@ -103,11 +103,22 @@ namespace MockIt
 
                 var suitableSut = suts.FirstOrDefault(x => (((INamedTypeSymbol)x.SymbolInfo.Symbol).AllInterfaces.Any(y => y.ToString() == refType.ToString() || y.ConstructedFrom == refType)));
 
-               var sutSubstitutions = GetSubstitutions(refType);
+                var sutSubstitutions = GetSubstitutions(refType);
 
                 var suitableSutMember = ((INamedTypeSymbol)suitableSut.SymbolInfo.Symbol).FindImplementationForInterfaceMember(symbol);
 
-                var sourceTree = suitableSutMember.Locations.First().SourceTree;
+                //for parameterized generic method
+                if (suitableSutMember == null)
+                {
+                    var s1 = symbol as IMethodSymbol;
+                    if (s1?.ConstructedFrom == null)
+                        return document;
+
+                    suitableSutMember =
+                        ((INamedTypeSymbol)suitableSut.SymbolInfo.Symbol).FindImplementationForInterfaceMember(s1.ConstructedFrom);
+                }
+
+            var sourceTree = suitableSutMember.Locations.First().SourceTree;
                 var treeRoot = sourceTree.GetRoot();
                 var position = suitableSutMember.Locations.First().SourceSpan.Start;
                 var node = treeRoot.FindToken(position).Parent.FirstAncestorOrSelf<MethodDeclarationSyntax>() as MemberDeclarationSyntax ?? treeRoot.FindToken(position).Parent.FirstAncestorOrSelf<PropertyDeclarationSyntax>();
