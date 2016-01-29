@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ConsoleApplication2;
 using Moq;
-using NUnit.Framework;
 
 namespace UnitTestProject1
 {
@@ -12,19 +10,19 @@ namespace UnitTestProject1
     {
         private Class1<List<string>, Dictionary<int, string>> sut;
 
-        [SetUp]
+        [TestInitialize]
         public void Init()
         {
             sut = new Class1<List<string>, Dictionary<int, string>>();
         }
 
-        [Test]
+        [TestMethod]
         public void TestMethod()
         {
             var prop = sut.PropertyFoo;
         }
 
-        [Test]
+        [TestMethod]
         public void TestProp()
         {
             var res = sut.Foo(new List<string>(), new Dictionary<int, string>());
