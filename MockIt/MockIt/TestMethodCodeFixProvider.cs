@@ -101,22 +101,29 @@ namespace MockIt
 
                 var refType = symbol.ContainingType;
 
-                var suitableSut = suts.FirstOrDefault(x => (((INamedTypeSymbol)x.SymbolInfo.Symbol).AllInterfaces.Any(y => y.ToString() == refType.ToString() || y.ConstructedFrom == refType)));
+            var suitableSut =
+                suts.FirstOrDefault(
+                    x =>
+                        x.SymbolInfo.Symbol is INamedTypeSymbol &&
+                        (((INamedTypeSymbol)x.SymbolInfo.Symbol).ToDisplayString() == refType.ToDisplayString() ||
+                         ((INamedTypeSymbol)x.SymbolInfo.Symbol).ConstructedFrom == refType) ||
+                        ((INamedTypeSymbol)x.SymbolInfo.Symbol).AllInterfaces.Any(
+                            y => y.ToDisplayString() == refType.ToDisplayString() || y.ConstructedFrom == refType));
 
-                var sutSubstitutions = GetSubstitutions(refType);
+            var sutSubstitutions = GetSubstitutions(refType);
 
-                var suitableSutMember = ((INamedTypeSymbol)suitableSut.SymbolInfo.Symbol).FindImplementationForInterfaceMember(symbol);
+            var suitableSutMember = ((INamedTypeSymbol)suitableSut.SymbolInfo.Symbol).FindImplementationForInterfaceMember(symbol);
 
-                //for parameterized generic method
-                if (suitableSutMember == null)
-                {
-                    var s1 = symbol as IMethodSymbol;
-                    if (s1?.ConstructedFrom == null)
-                        return document;
-
+            //for parameterized generic method
+            if (suitableSutMember == null)
+            {
+                var s1 = symbol as IMethodSymbol;
+                if (s1?.ConstructedFrom != null)
                     suitableSutMember =
                         ((INamedTypeSymbol)suitableSut.SymbolInfo.Symbol).FindImplementationForInterfaceMember(s1.ConstructedFrom);
-                }
+            }
+
+            if (suitableSutMember == null) suitableSutMember = symbol;
 
             var sourceTree = suitableSutMember.Locations.First().SourceTree;
                 var treeRoot = sourceTree.GetRoot();

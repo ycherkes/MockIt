@@ -104,7 +104,14 @@ namespace MockIt
 
                 var refType = symbol.OriginalDefinition.ContainingType;
 
-                var suitableSut = suts.FirstOrDefault(x => (x.SymbolInfo.Symbol as INamedTypeSymbol) != null && (((INamedTypeSymbol) x.SymbolInfo.Symbol).AllInterfaces.Any(y => y == refType || y.ConstructedFrom == refType )));
+                var suitableSut =
+                    suts.FirstOrDefault(
+                        x =>
+                            x.SymbolInfo.Symbol is INamedTypeSymbol &&
+                            ((INamedTypeSymbol) x.SymbolInfo.Symbol == refType ||
+                             ((INamedTypeSymbol) x.SymbolInfo.Symbol).ConstructedFrom == refType) ||
+                            ((INamedTypeSymbol) x.SymbolInfo.Symbol).AllInterfaces.Any(
+                                y => y == refType || y.ConstructedFrom == refType));
 
                 if (suitableSut == null)
                     continue;
@@ -115,14 +122,12 @@ namespace MockIt
                 if (suitableSutMember == null)
                 {
                     var s1 = symbol as IMethodSymbol;
-                    if(s1?.ConstructedFrom == null)
-                        continue;
-
-                    suitableSutMember =
+                    if(s1?.ConstructedFrom != null)
+                        suitableSutMember =
                         ((INamedTypeSymbol) suitableSut.SymbolInfo.Symbol).FindImplementationForInterfaceMember(s1.ConstructedFrom);
                 }
 
-                if (suitableSutMember == null) continue;
+                if (suitableSutMember == null) suitableSutMember = symbol;
 
                 var sourceTree = suitableSutMember.Locations.First().SourceTree;
                 var treeRoot = sourceTree.GetRoot();
