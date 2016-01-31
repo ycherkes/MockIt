@@ -238,7 +238,7 @@ namespace MockIt
             ITypeSymbol substitution;
             ITypeSymbol sutSubstitution;
 
-            return FriendlyNamesHelper.GetSimpleTypeName(
+            return TestSemanticHelper.GetSimpleTypeName(
                     substitutions.TryGetValue(z.ToString(), out substitution)
                     ? substitution
                     : sutSubstitutions.TryGetValue(z.ToString(), out sutSubstitution)
@@ -261,7 +261,7 @@ namespace MockIt
             }
             var propertyDefinitionsReplacement = GetReplacedDefinitions(sutSubstitutions, propertySymbol);
 
-            return symbol.ToString() == propertySymbol.ContainingType.ToString() ||
+            return symbol.ToString() == propertySymbol?.ContainingType.ToString() ||
                    propertyDefinitionsReplacement.Contains(symbol.ToString());
         }
 

@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace MockIt
 {
@@ -22,7 +21,7 @@ namespace MockIt
             return methodDecl;
         }
 
-        public static IEnumerable<MethodDeclarationSyntax> GetTestMethod(SemanticModel semanticModel)
+        public static MethodDeclarationSyntax[] GetTestMethods(SemanticModel semanticModel)
         {
             var methodDecl = semanticModel
                 .SyntaxTree
@@ -32,7 +31,24 @@ namespace MockIt
                 .Where(x => x.AttributeLists
                     .Any(y => y.Attributes
                         .Any(z => new[] { "Test", "TestMethod" }.Contains(((IdentifierNameSyntax)z.Name).Identifier.Text))));
-            return methodDecl;
+
+            return methodDecl.ToArray();
+        }
+
+        public static IEnumerable<MemberAccessExpressionSyntax> GetPropertiesToConfigureMocks(IEnumerable<SyntaxNode> nodes,
+            IEnumerable<ExpressionSyntax> methods)
+        {
+            var properties = nodes.SelectMany(node => GetPropertiesToConfigureMocks(node, methods))
+                                  .ToArray();
+
+            return properties;
+        }
+
+        public static ExpressionSyntax[] GetMethodsToConfigureMocks(IEnumerable<SyntaxNode> nodes)
+        {
+            var methods = nodes.SelectMany(GetMethodsToConfigureMocks).ToArray();
+
+            return methods;
         }
 
         public static IEnumerable<MemberAccessExpressionSyntax> GetPropertiesToConfigureMocks(SyntaxNode node,
@@ -53,6 +69,11 @@ namespace MockIt
                 .Select(expr => expr.Expression).ToArray();
 
             return methods;
+        }
+
+        public static string GetSimpleTypeName(ISymbol type)
+        {
+            return type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
         }
     }
 }

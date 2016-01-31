@@ -48,16 +48,11 @@ namespace MockIt
 
         private static void AnalyzeSemantic(SemanticModelAnalysisContext obj)
         {
-            var methodDecl = TestSemanticHelper.GetTestMethod(obj.SemanticModel);
+            var methodDecls = TestSemanticHelper.GetTestMethods(obj.SemanticModel);
 
-            var methods = methodDecl.SelectMany(x => x.DescendantNodes())
-                .OfType<InvocationExpressionSyntax>()
-                .Select(expr => expr.Expression).ToArray();
+            var methods = TestSemanticHelper.GetMethodsToConfigureMocks(methodDecls);
 
-            var properties = methodDecl.SelectMany(x => x.DescendantNodes())
-                .OfType<MemberAccessExpressionSyntax>()
-                .Where(expr => !expr.DescendantNodes(x => methods.Contains(x)).Any())
-                .ToArray();
+            var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(methodDecls, methods);
 
             var expressions = methods.Concat(properties).ToArray();
 
@@ -65,6 +60,7 @@ namespace MockIt
                 return;
 
             var testInitMethodDecl = TestSemanticHelper.GetTestInitializeMethod(obj.SemanticModel);
+
             if (testInitMethodDecl == null)
                 return;
 
