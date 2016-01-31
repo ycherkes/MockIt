@@ -9,19 +9,19 @@ namespace MockIt
     {
         public static MethodDeclarationSyntax GetTestInitializeMethod(SemanticModel semanticModel)
         {
-            var methodDecl = semanticModel
-                .SyntaxTree
-                .GetRoot()
-                .DescendantNodes()
-                .OfType<MethodDeclarationSyntax>()
-                .FirstOrDefault(x => x.AttributeLists
-                    .Any(y => y.Attributes
-                        .Any(z => new[] {"SetUp", "TestInitialize"}.Contains(((IdentifierNameSyntax) z.Name).Identifier.Text))));
+            var methods = GetMethodsWithAttributes(semanticModel, "SetUp", "TestInitialize");
 
-            return methodDecl;
+            return methods.FirstOrDefault();
         }
 
         public static MethodDeclarationSyntax[] GetTestMethods(SemanticModel semanticModel)
+        {
+            var methodDecls = GetMethodsWithAttributes(semanticModel, "Test", "TestMethod");
+
+            return methodDecls.ToArray();
+        }
+
+        private static IEnumerable<MethodDeclarationSyntax> GetMethodsWithAttributes(SemanticModel semanticModel, params string[] attributes)
         {
             var methodDecl = semanticModel
                 .SyntaxTree
@@ -30,9 +30,9 @@ namespace MockIt
                 .OfType<MethodDeclarationSyntax>()
                 .Where(x => x.AttributeLists
                     .Any(y => y.Attributes
-                        .Any(z => new[] { "Test", "TestMethod" }.Contains(((IdentifierNameSyntax)z.Name).Identifier.Text))));
+                        .Any(z => attributes.Contains(((IdentifierNameSyntax) z.Name).Identifier.Text))));
 
-            return methodDecl.ToArray();
+            return methodDecl;
         }
 
         public static IEnumerable<MemberAccessExpressionSyntax> GetPropertiesToConfigureMocks(IEnumerable<SyntaxNode> nodes,
