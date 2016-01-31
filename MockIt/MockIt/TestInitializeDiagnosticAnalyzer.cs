@@ -45,14 +45,9 @@ namespace MockIt
             context.RegisterSemanticModelAction(AnalyzeSemantic);
         }
 
-        private static void AnalyzeSemantic(SemanticModelAnalysisContext obj)
+        private static void AnalyzeSemantic(SemanticModelAnalysisContext semanticModel)
         {
-            var methodDecl = obj.SemanticModel.SyntaxTree.GetRoot()
-                                .DescendantNodes()
-                                .OfType<MethodDeclarationSyntax>()
-                                .FirstOrDefault(x => x.AttributeLists
-                                    .Any(y => y.Attributes
-                                        .Any(z => new[] { "TestFixtureSetUp", "SetUp", "TestInitialize" }.Contains(((IdentifierNameSyntax) z.Name).Identifier.Text))));
+            var methodDecl = TestSemanticHelper.GetTestInitializeMethod(semanticModel.SemanticModel);
 
             var expression = methodDecl?.DescendantNodes()
                                         .OfType<ObjectCreationExpressionSyntax>()
@@ -61,7 +56,7 @@ namespace MockIt
             if (expression == null)
                 return;
 
-            var symbolInfo = obj.SemanticModel.GetSymbolInfo(expression);
+            var symbolInfo = semanticModel.SemanticModel.GetSymbolInfo(expression);
 
             if (symbolInfo.CandidateReason != CandidateReason.OverloadResolutionFailure)
                 return;
@@ -71,7 +66,7 @@ namespace MockIt
                                                                                y => y.Type.IsAbstract));
 
             if (invokedSymbol != null)
-                obj.ReportDiagnostic(Diagnostic.Create(Rule, expression.Parent.GetLocation()));
+                semanticModel.ReportDiagnostic(Diagnostic.Create(Rule, expression.Parent.GetLocation()));
         }
     }
 }

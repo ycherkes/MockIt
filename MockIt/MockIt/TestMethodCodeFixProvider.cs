@@ -65,12 +65,7 @@ namespace MockIt
             var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
             var editor = await DocumentEditor.CreateAsync(document, cancellationToken).ConfigureAwait(false);
 
-            var testInitMethodDecl = semanticModel.SyntaxTree.GetRoot()
-                                .DescendantNodes()
-                                .OfType<MethodDeclarationSyntax>()
-                                .FirstOrDefault(x => x.AttributeLists
-                                    .Any(y => y.Attributes
-                                        .Any(z => new[] { "TestFixtureSetUp", "SetUp", "TestInitialize" }.Contains(((IdentifierNameSyntax)z.Name).Identifier.Text))));
+            var testInitMethodDecl = TestSemanticHelper.GetTestInitializeMethod(semanticModel);
 
             var declaredFields = testInitMethodDecl.Parent.ChildNodes().OfType<FieldDeclarationSyntax>();
 
@@ -96,10 +91,10 @@ namespace MockIt
                     return expression;
                 }).First();
 
-            
-                var symbol = semanticModel.GetSymbolInfo(memberAccessExpresion).Symbol;
 
-                var refType = symbol.ContainingType;
+            var symbol = semanticModel.GetSymbolInfo(memberAccessExpresion).Symbol;
+
+            var refType = symbol.ContainingType;
 
             var suitableSut =
                 suts.FirstOrDefault(
@@ -126,70 +121,69 @@ namespace MockIt
             if (suitableSutMember == null) suitableSutMember = symbol;
 
             var sourceTree = suitableSutMember.Locations.First().SourceTree;
-                var treeRoot = sourceTree.GetRoot();
-                var position = suitableSutMember.Locations.First().SourceSpan.Start;
-                var node = treeRoot.FindToken(position).Parent.FirstAncestorOrSelf<MethodDeclarationSyntax>() as MemberDeclarationSyntax ?? treeRoot.FindToken(position).Parent.FirstAncestorOrSelf<PropertyDeclarationSyntax>();
+            var treeRoot = sourceTree.GetRoot();
+            var position = suitableSutMember.Locations.First().SourceSpan.Start;
+            var node = treeRoot.FindToken(position).Parent.FirstAncestorOrSelf<MethodDeclarationSyntax>() as MemberDeclarationSyntax ?? treeRoot.FindToken(position).Parent.FirstAncestorOrSelf<PropertyDeclarationSyntax>();
 
-                var compilation = symbol.ContainingAssembly.Name == semanticModel.Compilation.Assembly.Name
-                            ? semanticModel.Compilation
-                            : semanticModel.Compilation.ExternalReferences
-                                .OfType<CompilationReference>()
-                                .Select(x => x.Compilation)
-                                .FirstOrDefault(x => x.Assembly.Name == symbol.ContainingAssembly.Name);
-                var model = compilation.GetSemanticModel(sourceTree);
+            var compilation = symbol.ContainingAssembly.Name == semanticModel.Compilation.Assembly.Name
+                        ? semanticModel.Compilation
+                        : semanticModel.Compilation.ExternalReferences
+                            .OfType<CompilationReference>()
+                            .Select(x => x.Compilation)
+                            .FirstOrDefault(x => x.Assembly.Name == symbol.ContainingAssembly.Name);
+            var model = compilation.GetSemanticModel(sourceTree);
 
-            var invoks1 = node.DescendantNodes()
-                .OfType<InvocationExpressionSyntax>()
-                .Select(expr => expr.Expression).ToArray();
+            var methods = TestSemanticHelper.GetMethodsToConfigureMocks(node);
 
-            var invoks2 = node.DescendantNodes()
-                .OfType<MemberAccessExpressionSyntax>()
-                .Where(expr => !expr.DescendantNodes(x => invoks1.Contains(x)).Any())
+            var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(node, methods);
+
+            var invoks = methods.Concat(properties).ToArray();
+
+            var invokedMethodsOfMocks = invoks
+                .Select(x => new { model.GetSymbolInfo(x).Symbol, Expression = x })
+                .Select(
+                    x =>
+                        new Fields
+                        {
+                            MethodOrPropertySymbol = x.Symbol,
+                            FieldsToSetup =
+                                suitableSut.DeclaredFields.Where(
+                                    z =>
+                                        // todo make corresponding variables determination without name equality ( sut.varname + "Mock" === test.mockVarName )
+                                        // removed
+                                        //z.Declaration.Variables[0].ToString() == ((MemberAccessExpressionSyntax)x.Expression).Expression.ToString() + "Mock" && 
+                                        ((z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList.Arguments.Any(y => IsCorrespondingType(semanticModel, y, x.Symbol, sutSubstitutions)) ?? false))
+                                    .Select(z => new FieldsSetups
+                                    {
+                                        Field = z.Declaration.Variables.Select(f => f.Identifier.ValueText),
+                                        Substitutions = (z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
+                                                                                 .Arguments.Select(y => GetSubstitutions(semanticModel, y))
+                                                                                 .SelectMany(s => s)
+                                                                                 .ToDictionary(s => s.Key, s => s.Value),
+                                        SutSubstitutions = sutSubstitutions
+                                    })
+                                    .ToArray()
+                        })
+                .Where(x => x.FieldsToSetup.Any())
                 .ToArray();
 
-            var invoks = invoks1.Concat(invoks2).ToArray();
-
-                var invokedMethodsOfMocks = invoks
-                    .Select(x => new { model.GetSymbolInfo(x).Symbol, Expression = x})
-                    .Select(
-                        x =>
-                            new Fields
-                            {
-                                MethodOrPropertySymbol = x.Symbol,
-                                FieldsToSetup =
-                                    suitableSut.DeclaredFields.Where(
-                                        z =>
-                                            // todo make corresponding variables determination without name equality ( sut.varname + "Mock" === test.mockVarName )
-                                            // removed
-                                            //z.Declaration.Variables[0].ToString() == ((MemberAccessExpressionSyntax)x.Expression).Expression.ToString() + "Mock" && 
-                                            ((z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList.Arguments.Any(y => IsCorrespondingType(semanticModel, y, x.Symbol, sutSubstitutions)) ?? false))
-                                        .Select(z => new FieldsSetups
-                                        {
-                                            Field = z.Declaration.Variables.Select(f => f.Identifier.ValueText),
-                                            Substitutions = (z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
-                                                                                     .Arguments.Select(y => GetSubstitutions(semanticModel, y))
-                                                                                     .SelectMany(s => s)
-                                                                                     .ToDictionary(s => s.Key, s => s.Value),
-                                            SutSubstitutions = sutSubstitutions
-                                        })
-                                        .ToArray()
-                            })
-                    .Where(x => x.FieldsToSetup.Any())
-                    .ToArray();
-
-                var setups = invokedMethodsOfMocks.SelectMany(x => x.FieldsToSetup
-                .SelectMany(y => y.Field.Select(f => GetSetups(f, x, y))))
-                .SelectMany(x => x)
-                .Distinct()
-                .Select(x => SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(x.Replace("#ToReplace#", "Setup").Replace("#ToReplaceGet#", "SetupGet").Replace("#ToReplaceSet#", "SetupSet"))))
-                .ToArray();
+            var setups = invokedMethodsOfMocks.SelectMany(x => x.FieldsToSetup
+            .SelectMany(y => y.Field.Select(f => GetSetups(f, x, y))))
+            .SelectMany(x =>
+            {
+                var collections = x as string[] ?? x.ToArray();
+                return collections;
+            })
+            .Distinct()
+            .Select(x => SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(x.Replace("#ToReplace#", "Setup").Replace("#ToReplaceGet#", "SetupGet").Replace("#ToReplaceSet#", "SetupSet"))))
+            .ToArray();
 
             var verifiers = invokedMethodsOfMocks.SelectMany(x => x.FieldsToSetup.SelectMany(y => y.Field)).Distinct().Select(x => SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(x + ".VerifyAll()"))).ToArray();
 
             editor.InsertBefore(invokationSyntax, setups.Select((x, i) => setups.Length - 1 == i ? x.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.ElasticMarker)).WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed, SyntaxFactory.CarriageReturnLineFeed)) : x.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.ElasticMarker))));
 
             //todo will try to understand why new line adds so difficult way
-            editor.InsertAfter(invokationSyntax, verifiers.Select(x => x.WithLeadingTrivia(SyntaxFactory.TriviaList(new[] {SyntaxFactory.CarriageReturnLineFeed}.Concat(invokationSyntax.GetLeadingTrivia())))));
+            editor.InsertAfter(invokationSyntax, verifiers.Select(x => x.WithLeadingTrivia(SyntaxFactory.TriviaList(new[] { SyntaxFactory.CarriageReturnLineFeed }.Concat(invokationSyntax.GetLeadingTrivia())))));
 
             return editor.GetChangedDocument();
         }
@@ -213,7 +207,7 @@ namespace MockIt
 
             if (methodSymbol != null)
 
-                return new [] { f + ".#ToReplace#(x => x." +
+                return new[] { f + ".#ToReplace#(x => x." +
                        methodSymbol.Name + "(" +
                        string.Join(", ", methodSymbol.Parameters.Select(z => "It.Is<" +
                                                                              GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, z.Type) +
@@ -227,9 +221,10 @@ namespace MockIt
                              "))"
                            : "")};
             else
-            {   var propertySymbol = (IPropertySymbol) x.MethodOrPropertySymbol;
+            {
+                var propertySymbol = (IPropertySymbol)x.MethodOrPropertySymbol;
 
-                return new []
+                return new[]
                 {
                     f + ".#ToReplaceGet#(x => x." + propertySymbol.Name + ").Returns(default(" + GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, propertySymbol.Type) + "))",
                      f + ".#ToReplaceSet#(x => x." + propertySymbol.Name + " = default(" + GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, propertySymbol.Type) + "))"
@@ -246,7 +241,7 @@ namespace MockIt
             return FriendlyNamesHelper.GetSimpleTypeName(
                     substitutions.TryGetValue(z.ToString(), out substitution)
                     ? substitution
-                    : sutSubstitutions.TryGetValue(z.ToString(), out sutSubstitution) 
+                    : sutSubstitutions.TryGetValue(z.ToString(), out sutSubstitution)
                     ? sutSubstitution
                     : z);
         }
@@ -306,7 +301,7 @@ namespace MockIt
                 return emptyDictionary;
 
             var typeMap = typeParameters.Zip(typeArguments,
-                (parameterSymbol, typeSymbol) => new {Key = parameterSymbol, Value = typeSymbol})
+                (parameterSymbol, typeSymbol) => new { Key = parameterSymbol, Value = typeSymbol })
                 .ToDictionary(pair => pair.Key.ToString(), pair => pair.Value);
 
             return typeMap;

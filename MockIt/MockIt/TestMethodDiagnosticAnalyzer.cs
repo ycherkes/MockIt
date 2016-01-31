@@ -48,38 +48,23 @@ namespace MockIt
 
         private static void AnalyzeSemantic(SemanticModelAnalysisContext obj)
         {
-            var methodDecl = obj.SemanticModel.SyntaxTree.GetRoot()
-                                .DescendantNodes()
-                                .OfType<MethodDeclarationSyntax>()
-                                .Where(x => x.AttributeLists
-                                    .Any(y => y.Attributes
-                                        .Any(z => new[] { "Test", "TestMethod" }.Contains(((IdentifierNameSyntax) z.Name).Identifier.Text)))).ToArray();
+            var methodDecl = TestSemanticHelper.GetTestMethod(obj.SemanticModel);
 
-            //var expressions = methodDecl.SelectMany(x => x.DescendantNodes())
-            //    .OfType<ExpressionSyntax>()
-            //    .Where(x => x is InvocationExpressionSyntax || x is MemberAccessExpressionSyntax)
-            //    .ToArray();
-
-            var invoks1 = methodDecl.SelectMany(x => x.DescendantNodes())
+            var methods = methodDecl.SelectMany(x => x.DescendantNodes())
                 .OfType<InvocationExpressionSyntax>()
                 .Select(expr => expr.Expression).ToArray();
 
-            var invoks2 = methodDecl.SelectMany(x => x.DescendantNodes())
+            var properties = methodDecl.SelectMany(x => x.DescendantNodes())
                 .OfType<MemberAccessExpressionSyntax>()
-                .Where(expr => !expr.DescendantNodes(x => invoks1.Contains(x)).Any())
+                .Where(expr => !expr.DescendantNodes(x => methods.Contains(x)).Any())
                 .ToArray();
 
-            var expressions = invoks1.Concat(invoks2).ToArray();
+            var expressions = methods.Concat(properties).ToArray();
 
             if (!expressions.Any())
                 return;
 
-            var testInitMethodDecl = obj.SemanticModel.SyntaxTree.GetRoot()
-                                .DescendantNodes()
-                                .OfType<MethodDeclarationSyntax>()
-                                .FirstOrDefault(x => x.AttributeLists
-                                    .Any(y => y.Attributes
-                                        .Any(z => new[] { "TestFixtureSetUp", "SetUp", "TestInitialize" }.Contains(((IdentifierNameSyntax)z.Name).Identifier.Text))));
+            var testInitMethodDecl = TestSemanticHelper.GetTestInitializeMethod(obj.SemanticModel);
             if (testInitMethodDecl == null)
                 return;
 

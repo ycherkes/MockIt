@@ -56,7 +56,7 @@ namespace MockIt
             context.RegisterCodeFix(CodeAction.Create("Make mock", c => MakeMock(context.Document, creation, c), "MockItTool"), diagnostic);
         }
 
-        private static string GetTypeNameFromType(INamedTypeSymbol symbol)
+        private static string GetTypeNameFromType(ISymbol symbol)
         {
             return FriendlyNamesHelper.GetSimpleTypeName(symbol);
         }
