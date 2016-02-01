@@ -12,7 +12,7 @@ namespace ConsoleApplication2
         {
             this.class2 = class2;
             this.class3 = class3;
-        }
+        }        
 
         public Tuple<T, T1> PropertyFoo
         {

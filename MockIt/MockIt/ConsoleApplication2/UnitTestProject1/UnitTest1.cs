@@ -8,7 +8,7 @@ namespace UnitTestProject1
     [TestClass]
     public class UnitTest1
     {
-        private Class1<List<string>, Dictionary<int, string>> sut;
+        private Class1<List<string>, Dictionary<int, string>> sut;       
 
         [TestInitialize]
         public void Init()

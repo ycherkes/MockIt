@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MockIt
@@ -52,12 +53,23 @@ namespace MockIt
         }
 
         public static IEnumerable<MemberAccessExpressionSyntax> GetPropertiesToConfigureMocks(SyntaxNode node,
-            IEnumerable<ExpressionSyntax> methods)
+            IEnumerable<ExpressionSyntax> methods, bool isLeftSideOfAssignExpression = false)
         {
+            var property = node as PropertyDeclarationSyntax;
+
+            if (property != null)
+            {
+                var accessors = property.AccessorList.Accessors;
+                var getter = accessors.FirstOrDefault(ad => ad.Kind() == SyntaxKind.GetAccessorDeclaration);
+                var setter = accessors.FirstOrDefault(ad => ad.Kind() == SyntaxKind.SetAccessorDeclaration);
+
+                node = (isLeftSideOfAssignExpression ? setter : getter);
+            }
+
             var properties = node.DescendantNodes()
-                .OfType<MemberAccessExpressionSyntax>()
-                .Where(expr => !expr.DescendantNodes(methods.Contains).Any())
-                .ToArray();
+                    .OfType<MemberAccessExpressionSyntax>()
+                    .Where(expr => !expr.DescendantNodes(methods.Contains).Any())
+                    .ToArray();
 
             return properties;
         }

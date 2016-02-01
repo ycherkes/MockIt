@@ -92,6 +92,7 @@ namespace MockIt
                 }).First();
 
 
+            var isLeftSideOfAssignExpression = memberAccessExpresion.IsLeftSideOfAssignExpression();
             var symbol = semanticModel.GetSymbolInfo(memberAccessExpresion).Symbol;
 
             var refType = symbol.ContainingType;
@@ -135,7 +136,7 @@ namespace MockIt
 
             var methods = TestSemanticHelper.GetMethodsToConfigureMocks(node);
 
-            var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(node, methods);
+            var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(node, methods, isLeftSideOfAssignExpression);
 
             var invoks = methods.Concat(properties).ToArray();
 
