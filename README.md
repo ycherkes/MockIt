@@ -25,7 +25,8 @@ After that change all **default(type)** expressions to values you want.
 
 Using a hotkeys: **F8** (Go to nex error-warning-info) or **F12** with Resharper -> **Ctrl + .** (Show potential fixes - Smart Tags  menu) or **Alt + Enter** with Resharper -> **m** (select "Make mock" in the menu) -> **Enter**
 
-This extension is currently compiled for VS Pro. I didn't find how to publish here an extension with type 'tool' for VS Community Edition. But it's available for downloading on the Github: https://github.com/ycherkes/MockIt/blob/master/MockIt.vsix
+This extension is currently compiled for VS Pro (https://visualstudiogallery.msdn.microsoft.com/713cf20e-e553-4bc9-ac02-477c750fad61). 
+I didn't find how to publish here an extension with type 'tool' for VS Community Edition. But it's available for downloading on the Github: https://github.com/ycherkes/MockIt/blob/master/MockIt.vsix
 
 It's also available via NuGet https://www.nuget.org/packages/MockIt/
  
