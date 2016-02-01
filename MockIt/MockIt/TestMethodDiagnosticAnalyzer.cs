@@ -121,8 +121,8 @@ namespace MockIt
                                 .OfType<CompilationReference>()
                                 .Select(x => x.Compilation)
                                 .FirstOrDefault(x => x.Assembly.Name == symbol.ContainingAssembly.Name);
-                var model = compilation.GetSemanticModel(sourceTree);
 
+                var model = compilation.GetSemanticModel(sourceTree);
 
                 var invokedMethodsOfMocks = node.DescendantNodes().OfType<MemberAccessExpressionSyntax>().SelectMany(
                     x =>

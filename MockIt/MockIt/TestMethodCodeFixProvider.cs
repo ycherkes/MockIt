@@ -140,11 +140,12 @@ namespace MockIt
             var invoks = methods.Concat(properties).ToArray();
 
             var invokedMethodsOfMocks = invoks
-                .Select(x => new { model.GetSymbolInfo(x).Symbol, Expression = x })
+                .Select(x => new { model.GetSymbolInfo(x).Symbol, Expression = x})
                 .Select(
                     x =>
                         new Fields
                         {
+                            Expression = x.Expression,
                             MethodOrPropertySymbol = x.Symbol,
                             FieldsToSetup =
                                 suitableSut.DeclaredFields.Where(
@@ -192,6 +193,7 @@ namespace MockIt
         {
             public ISymbol MethodOrPropertySymbol { get; set; }
             public IEnumerable<FieldsSetups> FieldsToSetup { get; set; }
+            public ExpressionSyntax Expression { get; set; }
         }
 
         private class FieldsSetups
@@ -206,31 +208,48 @@ namespace MockIt
             var methodSymbol = x.MethodOrPropertySymbol as IMethodSymbol;
 
             if (methodSymbol != null)
-
-                return new[] { f + ".#ToReplace#(x => x." +
-                       methodSymbol.Name + "(" +
-                       string.Join(", ", methodSymbol.Parameters.Select(z => "It.Is<" +
-                                                                             GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, z.Type) +
-                                                                             ">(" + z.Name + " => " + z.Name +
-                                                                             " == default(" +
-                                                                             GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, z.Type) +
-                                                                             "))")) + "))" +
-                       (methodSymbol.ReturnType.ToDisplayString() != "void"
-                           ? ".Returns(default(" +
-                             GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, methodSymbol.ReturnType) +
-                             "))"
-                           : "")};
-            else
             {
-                var propertySymbol = (IPropertySymbol)x.MethodOrPropertySymbol;
 
                 return new[]
                 {
-                    f + ".#ToReplaceGet#(x => x." + propertySymbol.Name + ").Returns(default(" + GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, propertySymbol.Type) + "))",
-                     f + ".#ToReplaceSet#(x => x." + propertySymbol.Name + " = default(" + GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, propertySymbol.Type) + "))"
+                    f + ".#ToReplace#(x => x." +
+                    methodSymbol.Name + "(" +
+                    string.Join(", ", methodSymbol.Parameters.Select(z => "It.Is<" +
+                                                                          GetSimpleTypeName(y.Substitutions,
+                                                                              y.SutSubstitutions, z.Type) +
+                                                                          ">(" + z.Name + " => " + z.Name +
+                                                                          " == default(" +
+                                                                          GetSimpleTypeName(y.Substitutions,
+                                                                              y.SutSubstitutions, z.Type) +
+                                                                          "))")) + "))" +
+                    (methodSymbol.ReturnType.ToDisplayString() != "void"
+                        ? ".Returns(default(" +
+                          GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, methodSymbol.ReturnType) +
+                          "))"
+                        : "")
                 };
-
             }
+
+            var propertySymbol = (IPropertySymbol)x.MethodOrPropertySymbol;
+
+            var expressions = new List<string>();
+
+            if (!propertySymbol.IsWriteOnly && !x.Expression.IsLeftSideOfAssignExpression())
+            {
+                var getExpression = f + ".#ToReplaceGet#(x => x." + propertySymbol.Name + ").Returns(default(" +
+                                    GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, propertySymbol.Type) + "))";
+
+                expressions.Add(getExpression);
+            }
+
+            if (propertySymbol.IsReadOnly || !x.Expression.IsLeftSideOfAssignExpression()) return expressions;
+
+            var setExpression = f + ".#ToReplaceSet#(x => x." + propertySymbol.Name + " = default(" +
+                                GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, propertySymbol.Type) + "))";
+
+            expressions.Add(setExpression);
+
+            return expressions;
         }
 
         private static string GetSimpleTypeName(IReadOnlyDictionary<string, ITypeSymbol> substitutions, IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions, ITypeSymbol z)

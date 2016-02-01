@@ -32,6 +32,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="SyntaxNodeExtensions.cs" />
     <Compile Include="TestMethodCodeFixProvider.cs" />
     <Compile Include="TestInitializeCodeFixProvider.cs" />
     <Compile Include="TestMethodDiagnosticAnalyzer.cs" />
