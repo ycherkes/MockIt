@@ -10,8 +10,9 @@
     <projectUrl>https://github.com/ycherkes/MockIt</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>A simple Visual Studio 2015 extension to automate of creating and configuring mocks in the unit tests.
-    Also available via Visual Studio gallery https://visualstudiogallery.msdn.microsoft.com/713cf20e-e553-4bc9-ac02-477c750fad61</description>
-    Don't forget to reload Visual Studio instance after the plugin installation
+    Also available via Visual Studio gallery https://visualstudiogallery.msdn.microsoft.com/713cf20e-e553-4bc9-ac02-477c750fad61 .
+    Don't forget to reload Visual Studio instance after the plugin installation.
+    </description>
     <copyright>Yevhen Cherkes</copyright>
     <tags>Code generation, NUnit, MSTest, Mock, Auto Mocking</tags>
     <frameworkAssemblies>
@@ -19,7 +20,7 @@
     </frameworkAssemblies>
   </metadata>
   <files>
-    <file src="*.dll" target="tools\analyzers\C#" exclude="**\Microsoft.CodeAnalysis.*;**\System.Collections.Immutable.*;**\System.Reflection.Metadata.*" />
+    <file src="*.dll" target="tools\analyzers\C#\" exclude="**\Microsoft.CodeAnalysis.*;**\System.Collections.Immutable.*;**\System.Reflection.Metadata.*" />
     <file src="tools\*.ps1" target="tools\" />
   </files>
 </package>
