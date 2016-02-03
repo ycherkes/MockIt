@@ -115,12 +115,7 @@ namespace MockIt
                 var position = suitableSutMember.Locations.First().SourceSpan.Start;
                 var node = treeRoot.FindToken(position).Parent.FirstAncestorOrSelf<MethodDeclarationSyntax>() as MemberDeclarationSyntax ?? treeRoot.FindToken(position).Parent.FirstAncestorOrSelf<PropertyDeclarationSyntax>();
 
-                var compilation = symbol.ContainingAssembly.Name == obj.SemanticModel.Compilation.Assembly.Name
-                            ? obj.SemanticModel.Compilation
-                            : obj.SemanticModel.Compilation.ExternalReferences
-                                .OfType<CompilationReference>()
-                                .Select(x => x.Compilation)
-                                .FirstOrDefault(x => x.Assembly.Name == symbol.ContainingAssembly.Name);
+                var compilation = TestSemanticHelper.GetCompilation(suitableSutMember, obj.SemanticModel);
 
                 var model = compilation.GetSemanticModel(sourceTree);
 

@@ -87,5 +87,17 @@ namespace MockIt
         {
             return type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
         }
+
+        public static Compilation GetCompilation(ISymbol suitableSutMember, SemanticModel semanticModel)
+        {
+            var compilation = suitableSutMember.ContainingSymbol.ContainingAssembly.Name ==
+                              semanticModel.Compilation.Assembly.Name
+                ? semanticModel.Compilation
+                : semanticModel.Compilation.ExternalReferences
+                    .OfType<CompilationReference>()
+                    .Select(x => x.Compilation)
+                    .FirstOrDefault(x => x.Assembly.Name == suitableSutMember.ContainingSymbol.ContainingAssembly.Name);
+            return compilation;
+        }
     }
 }
