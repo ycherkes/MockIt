@@ -34,4 +34,8 @@ Plans:
 
 simple events support
 
+Release History:
+
+ v 1.0.0.10 Fixed mocks detection when mocked classes/interfaces are declared in different assembly than sut
+
 ![alt tag](https://raw.githubusercontent.com/ycherkes/MockIt/master/MockIto.gif)
