@@ -3,22 +3,35 @@ A simple Visual Studio 2015 extension to automate of creating and configuring mo
 
 It helps you to automate mocks creating in your unit tests.
 
+Similar tasks can be solved by using Moq.AutoMocker but if you like to do it manually this tool helps you.
+
 How to use it:
 
-In the TestInitialize or SetUp marked method create the instance of your Service under test (sut).
+In the **TestInitialize** (**SetUp** for NUnit) marked method create the instance of your Service under the test (sut).
 
-After that you can see code analysis error and the next suggestions (bulb):
+After that you can see code analysis error and the next suggestions (lightbulbs):
+	to create a constructor without parameters
+	to make mock
+	
+Choose "**Make mock**" - it will create the mocks required for your service and put them into constructor.
 
-to create a constructor without parameters
-to make mock
- Choose "Make mock" - it will create the mocks required for your service and put them into constructor.
+Create **TestMethod** (**Test** for NUnit) marked method and write here a call of any methods of your sut.
 
- Create TestMethod or Test marked method and write here a call of any methods of your sut.
+If sut's method uses any of injected instances Visual Studio shows your code analysis info.
 
- If sut's method uses any of injected instances Visual Studio shows your code analysis info.
+Choose "**Make mock**" - it will setup the mock's methods and calls VerifyAll for each of them.
 
- Choose "Make mock" - it will setup the mock's methods and calls VerifyAll for each of them.
+After that change all **default(type)** expressions to values you want.
 
-It currently supports properties partially (setups generates for both get and set methods without analysis uses it or no)
+Using a hotkeys: **F8** (Go to nex error-warning-info) or **F12** with Resharper -> **Ctrl + .** (Show potential fixes - Smart Tags  menu) or **Alt + Enter** with Resharper -> **m** (select "Make mock" in the menu) -> **Enter**
+
+This extension is currently compiled for VS Pro (https://visualstudiogallery.msdn.microsoft.com/713cf20e-e553-4bc9-ac02-477c750fad61). 
+I didn't find how to publish here an extension with type 'tool' for VS Community Edition. But it's available for downloading on the Github: https://github.com/ycherkes/MockIt/blob/master/MockIt.vsix
+
+It's also available via NuGet https://www.nuget.org/packages/MockIt/
+ 
+Plans: 
+
+simple events support
 
 ![alt tag](https://raw.githubusercontent.com/ycherkes/MockIt/master/MockIto.gif)
