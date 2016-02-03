@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
   <metadata>
     <id>MockIt</id>
-    <version>1.0.0.10</version>
+    <version>1.0.0.11</version>
     <title>MockIt</title>
     <authors>Yevhen Cherkes</authors>
     <owners>Yevhen Cherkes</owners>
@@ -11,6 +11,7 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>A simple Visual Studio 2015 extension to automate of creating and configuring mocks in the unit tests.
     Also available via Visual Studio gallery https://visualstudiogallery.msdn.microsoft.com/713cf20e-e553-4bc9-ac02-477c750fad61</description>
+    Don't forget to reload Visual Studio instance after the plugin installation
     <copyright>Yevhen Cherkes</copyright>
     <tags>Code generation, NUnit, MSTest, Mock, Auto Mocking</tags>
     <frameworkAssemblies>
