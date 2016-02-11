@@ -74,7 +74,7 @@ namespace MockIt
                 .Select(x => new
                 {
                     SymbolInfo = semanticModel.GetSymbolInfo(x.Type),
-                    DeclaredFields = declaredFields.Where(z => x.ArgumentList.Arguments.Any(y => y.Expression.GetText().ToString() == z.Declaration.Variables.FirstOrDefault()?.Identifier.Text + ".Object")).ToArray()
+                    DeclaredFields = declaredFields.Where(z => x.ArgumentList.Arguments.Any(y => IsSuitableDeclaredField(z, y))).ToArray()
                 })
                 .Where(x => x.DeclaredFields.Any())
                 .ToArray();
@@ -150,14 +150,15 @@ namespace MockIt
                                         // todo make corresponding variables determination without name equality ( sut.varname + "Mock" === test.mockVarName )
                                         // removed
                                         //z.Declaration.Variables[0].ToString() == ((MemberAccessExpressionSyntax)x.Expression).Expression.ToString() + "Mock" && 
-                                        ((z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList.Arguments.Any(y => IsCorrespondingType(semanticModel, y, x.Symbol, sutSubstitutions)) ?? false))
+                                        ((z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList.Arguments.Any(y => IsCorrespondingType(semanticModel, y, x.Symbol, sutSubstitutions)) ?? false /*?? IsCorrespondingType(semanticModel, z.Declaration.Type, x.Symbol, sutSubstitutions)*/))
                                     .Select(z => new FieldsSetups
                                     {
                                         Field = z.Declaration.Variables.Select(f => f.Identifier.ValueText),
                                         Substitutions = (z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
                                                                                  .Arguments.Select(y => GetSubstitutions(semanticModel, y))
                                                                                  .SelectMany(s => s)
-                                                                                 .ToDictionary(s => s.Key, s => s.Value),
+                                                                                 .ToDictionary(s => s.Key, s => s.Value), 
+                                                                                 //?? GetSubstitutions(semanticModel, z.Declaration.Type),
                                         SutSubstitutions = sutSubstitutions
                                     })
                                     .ToArray()
@@ -184,6 +185,11 @@ namespace MockIt
             editor.InsertAfter(invokationSyntax, verifiers.Select(x => x.WithLeadingTrivia(SyntaxFactory.TriviaList(new[] { SyntaxFactory.CarriageReturnLineFeed }.Concat(invokationSyntax.GetLeadingTrivia())))));
 
             return editor.GetChangedDocument();
+        }
+
+        private static bool IsSuitableDeclaredField(BaseFieldDeclarationSyntax z, ArgumentSyntax y)
+        {
+            return new[] { z.Declaration.Variables.FirstOrDefault()?.Identifier.Text + ".Object", z.Declaration.Variables.FirstOrDefault()?.Identifier.Text }.Contains(y.Expression.GetText().ToString().Trim());
         }
 
         private class Fields

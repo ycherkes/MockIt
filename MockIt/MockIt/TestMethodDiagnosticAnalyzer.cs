@@ -71,7 +71,7 @@ namespace MockIt
                 .Select(x => new
                 {
                     SymbolInfo = obj.SemanticModel.GetSymbolInfo(x.Type),
-                    DeclaredFields = declaredFields.Where(z => x.ArgumentList.Arguments.Any(y => y.Expression.GetText().ToString() == z.Declaration.Variables.FirstOrDefault()?.Identifier.Text + ".Object")).ToArray()
+                    DeclaredFields = declaredFields.Where(z => x.ArgumentList.Arguments.Any(y => IsSuitableDeclaredField(z, y))).ToArray()
                 })
                 .Where(x => x.DeclaredFields.Any())
                 .ToArray();
@@ -159,6 +159,11 @@ namespace MockIt
 
                 obj.ReportDiagnostic(Diagnostic.Create(Rule, expression.Parent.GetLocation()));
             }
+        }
+
+        private static bool IsSuitableDeclaredField(BaseFieldDeclarationSyntax z, ArgumentSyntax y)
+        {
+            return new[] { z.Declaration.Variables.FirstOrDefault()?.Identifier.Text + ".Object", z.Declaration.Variables.FirstOrDefault()?.Identifier.Text }.Contains(y.Expression.GetText().ToString().Trim());
         }
 
         public static SyntaxNode Parents(SyntaxNode node, Func<SyntaxNode, bool> criteria)
