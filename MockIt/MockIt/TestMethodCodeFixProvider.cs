@@ -181,8 +181,8 @@ namespace MockIt
 
             editor.InsertBefore(invokationSyntax, setups.Select((x, i) => setups.Length - 1 == i ? x.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.ElasticMarker)).WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed, SyntaxFactory.CarriageReturnLineFeed)) : x.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.ElasticMarker))));
 
-            //todo will try to understand why new line adds so difficult way
-            editor.InsertAfter(invokationSyntax, verifiers.Select(x => x.WithLeadingTrivia(SyntaxFactory.TriviaList(new[] { SyntaxFactory.CarriageReturnLineFeed }.Concat(invokationSyntax.GetLeadingTrivia())))));
+            //todo will try to understand how to add a new line before
+            editor.InsertAfter(invokationSyntax, verifiers.Select(x => x.WithLeadingTrivia(SyntaxFactory.ElasticMarker)));
 
             return editor.GetChangedDocument();
         }

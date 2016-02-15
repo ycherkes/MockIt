@@ -117,8 +117,7 @@ namespace MockIt.Test
             subServiceMock.Setup(x => x.DoSubSomething(It.Is<int>(doInt => doInt == default(int))));
 
             sut.DoSomething(2);
-
-                        subServiceMock.VerifyAll();
+            subServiceMock.VerifyAll();
         }
                 }
             }
@@ -239,8 +238,7 @@ namespace MockIt.Test
             subServiceMock.Setup(x => x.DoSubSomething(It.Is<int>(doInt => doInt == default(int)))).Returns(default(bool));
 
             sut.DoSomething(2);
-
-                        subServiceMock.VerifyAll();
+            subServiceMock.VerifyAll();
         }
                 }
             }
