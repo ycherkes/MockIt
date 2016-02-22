@@ -31,7 +31,8 @@ namespace MockIt
                 .OfType<MethodDeclarationSyntax>()
                 .Where(x => x.AttributeLists
                     .Any(y => y.Attributes
-                        .Any(z => attributes.Contains(((IdentifierNameSyntax) z.Name).Identifier.Text))));
+                        .Any(z => z.Name is IdentifierNameSyntax && 
+                                  attributes.Contains(((IdentifierNameSyntax) z.Name).Identifier.Text))));
 
             return methodDecl;
         }
@@ -109,7 +110,8 @@ namespace MockIt
                 {
                     SymbolInfo = semanticModel.GetSymbolInfo(x.Type),
                     DeclaredFields =
-                        declaredFields.Where(z => x.ArgumentList.Arguments.Any(y => IsSuitableDeclaredField(z, y))).ToArray()
+                        declaredFields.Where(z => x.ArgumentList != null 
+                                                  && x.ArgumentList.Arguments.Any(y => IsSuitableDeclaredField(z, y))).ToArray()
                 })
                 .Where(x => x.DeclaredFields.Any())
                 .ToArray();
