@@ -16,6 +16,7 @@
 // The latest version of this file can be found at https://github.com/ycherkes/MockIt
 #endregion
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -66,15 +67,7 @@ namespace MockIt
 
             var declaredFields = testInitMethodDecl.Parent.ChildNodes().OfType<FieldDeclarationSyntax>();
 
-            var suts = testInitMethodDecl.DescendantNodes()
-                .OfType<ObjectCreationExpressionSyntax>()
-                .Select(x => new
-                {
-                    SymbolInfo = obj.SemanticModel.GetSymbolInfo(x.Type),
-                    DeclaredFields = declaredFields.Where(z => x.ArgumentList.Arguments.Any(y => IsSuitableDeclaredField(z, y))).ToArray()
-                })
-                .Where(x => x.DeclaredFields.Any())
-                .ToArray();
+            var suts = testInitMethodDecl.GetSuts(obj.SemanticModel, declaredFields);
 
             foreach (var expression in expressions)
             {
@@ -85,14 +78,7 @@ namespace MockIt
 
                 var refType = symbol.OriginalDefinition.ContainingType;
 
-                var suitableSut =
-                    suts.FirstOrDefault(
-                        x =>
-                            x.SymbolInfo.Symbol is INamedTypeSymbol &&
-                            ((INamedTypeSymbol) x.SymbolInfo.Symbol == refType ||
-                             ((INamedTypeSymbol) x.SymbolInfo.Symbol).ConstructedFrom == refType) ||
-                            ((INamedTypeSymbol) x.SymbolInfo.Symbol).AllInterfaces.Any(
-                                y => y == refType || y.ConstructedFrom == refType));
+                var suitableSut = refType.GetSuitableSut(suts);
 
                 if (suitableSut == null)
                     continue;
@@ -159,11 +145,6 @@ namespace MockIt
 
                 obj.ReportDiagnostic(Diagnostic.Create(Rule, expression.Parent.GetLocation()));
             }
-        }
-
-        private static bool IsSuitableDeclaredField(BaseFieldDeclarationSyntax z, ArgumentSyntax y)
-        {
-            return new[] { z.Declaration.Variables.FirstOrDefault()?.Identifier.Text + ".Object", z.Declaration.Variables.FirstOrDefault()?.Identifier.Text }.Contains(y.Expression.GetText().ToString().Trim());
         }
 
         public static SyntaxNode Parents(SyntaxNode node, Func<SyntaxNode, bool> criteria)

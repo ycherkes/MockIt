@@ -99,5 +99,42 @@ namespace MockIt
                     .FirstOrDefault(x => x.Assembly.Name == suitableSutMember.ContainingSymbol.ContainingAssembly.Name);
             return compilation;
         }
+
+        public static IReadOnlyCollection<SutInfo> GetSuts(this SyntaxNode testInitMethodDecl, SemanticModel semanticModel,
+            IEnumerable<FieldDeclarationSyntax> declaredFields)
+        {
+            var suts = testInitMethodDecl.DescendantNodes()
+                .OfType<ObjectCreationExpressionSyntax>()
+                .Select(x => new SutInfo
+                {
+                    SymbolInfo = semanticModel.GetSymbolInfo(x.Type),
+                    DeclaredFields =
+                        declaredFields.Where(z => x.ArgumentList.Arguments.Any(y => IsSuitableDeclaredField(z, y))).ToArray()
+                })
+                .Where(x => x.DeclaredFields.Any())
+                .ToArray();
+
+            return suts;
+        }
+
+        public static SutInfo GetSuitableSut(this INamedTypeSymbol refType, IEnumerable<SutInfo> suts)
+        {
+            var suitableSut =
+                suts.FirstOrDefault(
+                    x =>
+                        x.SymbolInfo.Symbol is INamedTypeSymbol &&
+                        (((INamedTypeSymbol)x.SymbolInfo.Symbol).ToDisplayString() == refType.ToDisplayString() ||
+                        ((INamedTypeSymbol)x.SymbolInfo.Symbol).ConstructedFrom == refType) ||
+                        ((INamedTypeSymbol)x.SymbolInfo.Symbol).AllInterfaces.Any(
+                           y => y.ToDisplayString() == refType.ToDisplayString() || 
+                           y.ConstructedFrom == refType));
+
+            return suitableSut;
+        }
+
+        private static bool IsSuitableDeclaredField(BaseFieldDeclarationSyntax z, ArgumentSyntax y)
+        {
+            return new[] { z.Declaration.Variables.FirstOrDefault()?.Identifier.Text + ".Object", z.Declaration.Variables.FirstOrDefault()?.Identifier.Text }.Contains(y.Expression.GetText().ToString().Trim());
+        }
     }
 }

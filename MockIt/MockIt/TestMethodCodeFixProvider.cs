@@ -69,15 +69,7 @@ namespace MockIt
 
             var declaredFields = testInitMethodDecl.Parent.ChildNodes().OfType<FieldDeclarationSyntax>();
 
-            var suts = testInitMethodDecl.DescendantNodes()
-                .OfType<ObjectCreationExpressionSyntax>()
-                .Select(x => new
-                {
-                    SymbolInfo = semanticModel.GetSymbolInfo(x.Type),
-                    DeclaredFields = declaredFields.Where(z => x.ArgumentList.Arguments.Any(y => IsSuitableDeclaredField(z, y))).ToArray()
-                })
-                .Where(x => x.DeclaredFields.Any())
-                .ToArray();
+            var suts = testInitMethodDecl.GetSuts(semanticModel, declaredFields);
 
             var memberAccessExpresion = invokationSyntax.DescendantNodes()
                 .OfType<ExpressionSyntax>()
@@ -97,14 +89,7 @@ namespace MockIt
 
             var refType = symbol.ContainingType;
 
-            var suitableSut =
-                suts.FirstOrDefault(
-                    x =>
-                        x.SymbolInfo.Symbol is INamedTypeSymbol &&
-                        (((INamedTypeSymbol)x.SymbolInfo.Symbol).ToDisplayString() == refType.ToDisplayString() ||
-                         ((INamedTypeSymbol)x.SymbolInfo.Symbol).ConstructedFrom == refType) ||
-                        ((INamedTypeSymbol)x.SymbolInfo.Symbol).AllInterfaces.Any(
-                            y => y.ToDisplayString() == refType.ToDisplayString() || y.ConstructedFrom == refType));
+            var suitableSut = refType.GetSuitableSut(suts);
 
             var sutSubstitutions = GetSubstitutions(refType);
 
@@ -186,11 +171,7 @@ namespace MockIt
 
             return editor.GetChangedDocument();
         }
-
-        private static bool IsSuitableDeclaredField(BaseFieldDeclarationSyntax z, ArgumentSyntax y)
-        {
-            return new[] { z.Declaration.Variables.FirstOrDefault()?.Identifier.Text + ".Object", z.Declaration.Variables.FirstOrDefault()?.Identifier.Text }.Contains(y.Expression.GetText().ToString().Trim());
-        }
+        
 
         private class Fields
         {
