@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -94,10 +95,12 @@ namespace MockIt
             var compilation = suitableSutMember.ContainingSymbol.ContainingAssembly.Name ==
                               semanticModel.Compilation.Assembly.Name
                 ? semanticModel.Compilation
-                : semanticModel.Compilation.ExternalReferences
-                    .OfType<CompilationReference>()
-                    .Select(x => x.Compilation)
-                    .FirstOrDefault(x => x.Assembly.Name == suitableSutMember.ContainingSymbol.ContainingAssembly.Name);
+                : semanticModel.Compilation
+                               .ExternalReferences
+                               .OfType<CompilationReference>()
+                               .Select(x => x.Compilation)
+                               .FirstOrDefault(x => x.Assembly.Name == suitableSutMember.ContainingSymbol.ContainingAssembly.Name);
+
             return compilation;
         }
 
@@ -132,6 +135,20 @@ namespace MockIt
                            y.ConstructedFrom == refType));
 
             return suitableSut;
+        }
+
+        public static SyntaxNode Parents(this SyntaxNode node, Func<SyntaxNode, bool> criteria)
+        {
+            while (true)
+            {
+                if (criteria(node))
+                    return node;
+
+                if (node.Parent == null)
+                    return null;
+
+                node = node.Parent;
+            }
         }
 
         private static bool IsSuitableDeclaredField(BaseFieldDeclarationSyntax z, ArgumentSyntax y)

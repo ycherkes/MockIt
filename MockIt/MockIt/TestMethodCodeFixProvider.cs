@@ -113,6 +113,8 @@ namespace MockIt
 
             var compilation = TestSemanticHelper.GetCompilation(suitableSutMember, semanticModel);
 
+            if (compilation == null) return document;
+
             var model = compilation.GetSemanticModel(sourceTree);
 
             var methods = TestSemanticHelper.GetMethodsToConfigureMocks(node);

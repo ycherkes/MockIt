@@ -15,8 +15,7 @@
 // 
 // The latest version of this file can be found at https://github.com/ycherkes/MockIt
 #endregion
-using System;
-using System.Collections.Generic;
+
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -62,8 +61,7 @@ namespace MockIt
 
             var testInitMethodDecl = TestSemanticHelper.GetTestInitializeMethod(obj.SemanticModel);
 
-            if (testInitMethodDecl == null)
-                return;
+            if (testInitMethodDecl == null) return;
 
             var declaredFields = testInitMethodDecl.Parent.ChildNodes().OfType<FieldDeclarationSyntax>();
 
@@ -103,6 +101,8 @@ namespace MockIt
 
                 var compilation = TestSemanticHelper.GetCompilation(suitableSutMember, obj.SemanticModel);
 
+                if(compilation == null) return;
+
                 var model = compilation.GetSemanticModel(sourceTree);
 
                 var invokedMethodsOfMocks = node.DescendantNodes().OfType<MemberAccessExpressionSyntax>().SelectMany(
@@ -134,30 +134,17 @@ namespace MockIt
                 
 
 
-                if (invokedMethodsOfMocks.Length == 0 || Parents(expression, n => n is BlockSyntax)?.DescendantNodes()
-                                                               .OfType<InvocationExpressionSyntax>()
-                                                               .Select(x => x.ToString())
-                                                               .Any(x => invokedMethodsOfMocks.SelectMany(y => y.FieldsToSetup)
-                                                                                              .Any(e => x.StartsWith(e + ".Setup"))) == true)
+                if (invokedMethodsOfMocks.Length == 0 || expression.Parents(n => n is BlockSyntax)?
+                                                                   .DescendantNodes()
+                                                                   .OfType<InvocationExpressionSyntax>()
+                                                                   .Select(x => x.ToString())
+                                                                   .Any(x => invokedMethodsOfMocks.SelectMany(y => y.FieldsToSetup)
+                                                                                                  .Any(e => x.StartsWith(e + ".Setup"))) == true)
                 {
                     continue;
                 }
 
                 obj.ReportDiagnostic(Diagnostic.Create(Rule, expression.Parent.GetLocation()));
-            }
-        }
-
-        public static SyntaxNode Parents(SyntaxNode node, Func<SyntaxNode, bool> criteria)
-        {
-            while (true)
-            {
-                if (criteria(node))
-                    return node;
-
-                if (node.Parent == null)
-                    return null;
-
-                node = node.Parent;
             }
         }
     }
