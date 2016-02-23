@@ -151,6 +151,25 @@ namespace MockIt
             }
         }
 
+        public static ISymbol GetSuitableSutMember(this SutInfo suitableSut, ISymbol memberSymbol)
+        {
+            var suitableSutMember =
+                ((INamedTypeSymbol)suitableSut.SymbolInfo.Symbol).FindImplementationForInterfaceMember(memberSymbol);
+
+
+            if (suitableSutMember != null) return suitableSutMember;
+
+            //for parameterized generic method
+            var s1 = memberSymbol as IMethodSymbol;
+
+            if (s1?.ConstructedFrom != null)
+                suitableSutMember =
+                    ((INamedTypeSymbol)suitableSut.SymbolInfo.Symbol).FindImplementationForInterfaceMember(
+                        s1.ConstructedFrom);
+
+            return suitableSutMember ?? memberSymbol;
+        }
+
         private static bool IsSuitableDeclaredField(BaseFieldDeclarationSyntax z, ArgumentSyntax y)
         {
             return new[] { z.Declaration.Variables.FirstOrDefault()?.Identifier.Text + ".Object", z.Declaration.Variables.FirstOrDefault()?.Identifier.Text }.Contains(y.Expression.GetText().ToString().Trim());

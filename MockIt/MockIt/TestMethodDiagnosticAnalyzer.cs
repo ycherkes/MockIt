@@ -81,18 +81,7 @@ namespace MockIt
                 if (suitableSut == null)
                     continue;
 
-                var suitableSutMember = ((INamedTypeSymbol)suitableSut.SymbolInfo.Symbol).FindImplementationForInterfaceMember(symbol);
-
-                //for parameterized generic method
-                if (suitableSutMember == null)
-                {
-                    var s1 = symbol as IMethodSymbol;
-                    if(s1?.ConstructedFrom != null)
-                        suitableSutMember =
-                        ((INamedTypeSymbol) suitableSut.SymbolInfo.Symbol).FindImplementationForInterfaceMember(s1.ConstructedFrom);
-                }
-
-                if (suitableSutMember == null) suitableSutMember = symbol;
+                var suitableSutMember = suitableSut.GetSuitableSutMember(symbol);
 
                 var sourceTree = suitableSutMember.Locations.First().SourceTree;
                 var treeRoot = sourceTree.GetRoot();
@@ -147,5 +136,6 @@ namespace MockIt
                 obj.ReportDiagnostic(Diagnostic.Create(Rule, expression.Parent.GetLocation()));
             }
         }
+       
     }
 }
