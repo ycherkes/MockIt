@@ -129,9 +129,9 @@ namespace MockIt
         private static IEnumerable<string> GetFieldsToSetup(SemanticModel semanticModel, IEnumerable<IMethodSymbol> methodSymbols, SutInfo suitableSut)
         {
             return methodSymbols.SelectMany(x =>  suitableSut.DeclaredFields
-                                                              .Where(IsCorrespondingField(semanticModel, x))
-                                                              .SelectMany(z => z.Declaration.Variables.Select(f => f.Identifier.ValueText))
-                                                              .ToArray())
+                                                             .Where(IsCorrespondingField(semanticModel, x))
+                                                             .SelectMany(z => z.Declaration.Variables.Select(f => f.Identifier.ValueText))
+                                                             .ToArray())
                                 .ToArray();
         }
 
