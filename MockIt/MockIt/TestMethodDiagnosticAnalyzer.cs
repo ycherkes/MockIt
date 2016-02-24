@@ -48,9 +48,10 @@ namespace MockIt
             context.RegisterSemanticModelAction(AnalyzeSemantic);
         }
 
-        private static void AnalyzeSemantic(SemanticModelAnalysisContext obj)
+        private static void AnalyzeSemantic(SemanticModelAnalysisContext semanticContext)
         {
-            var methodDecls = TestSemanticHelper.GetTestMethods(obj.SemanticModel);
+            var semanticModel = semanticContext.SemanticModel;
+            var methodDecls = TestSemanticHelper.GetTestMethods(semanticModel);
 
             var methods = TestSemanticHelper.GetMethodsToConfigureMocks(methodDecls);
 
@@ -61,17 +62,17 @@ namespace MockIt
             if (!expressions.Any())
                 return;
 
-            var testInitMethodDecl = TestSemanticHelper.GetTestInitializeMethod(obj.SemanticModel);
+            var testInitMethodDecl = TestSemanticHelper.GetTestInitializeMethod(semanticModel);
 
             if (testInitMethodDecl == null) return;
 
             var declaredFields = testInitMethodDecl.Parent.ChildNodes().OfType<FieldDeclarationSyntax>();
 
-            var suts = testInitMethodDecl.GetSuts(obj.SemanticModel, declaredFields);
+            var suts = testInitMethodDecl.GetSuts(semanticModel, declaredFields);
 
             foreach (var expression in expressions)
             {
-                var symbol = obj.SemanticModel.GetSymbolInfo(expression).Symbol;
+                var symbol = semanticModel.GetSymbolInfo(expression).Symbol;
 
                 if(symbol == null)
                     continue;
@@ -88,11 +89,11 @@ namespace MockIt
                 var sourceTree = suitableSutMember.Locations.First().SourceTree;
                 var treeRoot = sourceTree.GetRoot();
                 var position = suitableSutMember.Locations.First().SourceSpan.Start;
+                var parentNode = treeRoot.FindToken(position).Parent;
+                var node = parentNode.FirstAncestorOrSelf<MethodDeclarationSyntax>() as MemberDeclarationSyntax 
+                            ?? parentNode.FirstAncestorOrSelf<PropertyDeclarationSyntax>();
 
-                var node = treeRoot.FindToken(position).Parent.FirstAncestorOrSelf<MethodDeclarationSyntax>() as MemberDeclarationSyntax 
-                            ?? treeRoot.FindToken(position).Parent.FirstAncestorOrSelf<PropertyDeclarationSyntax>();
-
-                var compilation = TestSemanticHelper.GetCompilation(suitableSutMember, obj.SemanticModel);
+                var compilation = TestSemanticHelper.GetCompilation(suitableSutMember, semanticModel);
 
                 if(compilation == null) return;
 
@@ -112,26 +113,26 @@ namespace MockIt
                 var methodInvokationSymbols = descendants.OfType<InvocationExpressionSyntax>()
                                                          .Select(x => (IMethodSymbol)model.GetSymbolInfo(x.Expression).Symbol);
 
-                var invokedMethodsOfMocks = propertyGetSetSymbols.Concat(methodInvokationSymbols)
-                    .Where(x => x != null)
-                    .Select(x => new 
-                            {
-                                MethodOrPropertySymbol = x,
-                                FieldsToSetup = suitableSut.DeclaredFields
-                                                           .Where(IsCorrespondingField(obj.SemanticModel, x))
-                                                           .SelectMany(z => z.Declaration.Variables.Select(f => f.Identifier.ValueText))
-                                                           .ToArray()
-                            })
-                    .Where(x => x.FieldsToSetup.Any())
-                    .ToArray();
+                var allSymbols = propertyGetSetSymbols.Concat(methodInvokationSymbols);
+
+                var fieldsToSetup = GetFieldsToSetup(semanticModel, allSymbols, suitableSut);
                 
 
 
-                if(IsNotExpresisonNeedsToMock(invokedMethodsOfMocks.SelectMany(y => y.FieldsToSetup), expression))
+                if(IsNotExpresisonNeedsToMock(fieldsToSetup, expression))
                     continue;
 
-                obj.ReportDiagnostic(Diagnostic.Create(Rule, expression.Parent.GetLocation()));
+                semanticContext.ReportDiagnostic(Diagnostic.Create(Rule, expression.Parent.GetLocation()));
             }
+        }
+
+        private static IEnumerable<string> GetFieldsToSetup(SemanticModel semanticModel, IEnumerable<IMethodSymbol> methodSymbols, SutInfo suitableSut)
+        {
+            return methodSymbols.SelectMany(x =>  suitableSut.DeclaredFields
+                                                              .Where(IsCorrespondingField(semanticModel, x))
+                                                              .SelectMany(z => z.Declaration.Variables.Select(f => f.Identifier.ValueText))
+                                                              .ToArray())
+                                .ToArray();
         }
 
         private static bool IsNotExpresisonNeedsToMock(IEnumerable<string> mocksInvokations, SyntaxNode expression)
