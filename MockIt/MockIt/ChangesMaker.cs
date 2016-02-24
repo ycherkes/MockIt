@@ -48,7 +48,7 @@ namespace MockIt
                 return new[]
                 {
                     f + ".#ToReplace#(x => x." +
-                    methodSymbol.Name + "(" +
+                    GetMethodName(methodSymbol, y.Substitutions, y.SutSubstitutions) + "(" +
                     Join(", ", methodSymbol.Parameters.Select(z => "It.Is<" +
                                                                           GetSimpleTypeName(y.Substitutions,
                                                                               y.SutSubstitutions, z.Type) +
@@ -85,6 +85,16 @@ namespace MockIt
             expressions.Add(setExpression);
 
             return expressions;
+        }
+
+        private static string GetMethodName(IMethodSymbol methodSymbol, 
+            IReadOnlyDictionary<string, ITypeSymbol> substitutions,
+            IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
+        {
+            if(!methodSymbol.IsGenericMethod)
+                return methodSymbol.Name;
+
+            return methodSymbol.Name + "<" + Join(", ", methodSymbol.TypeParameters.Select(x => GetSimpleTypeName(substitutions, sutSubstitutions, x))) + ">";
         }
 
         private static string GetSimpleTypeName(
