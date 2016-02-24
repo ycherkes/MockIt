@@ -16,6 +16,8 @@
 // The latest version of this file can be found at https://github.com/ycherkes/MockIt
 #endregion
 
+using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -96,48 +98,58 @@ namespace MockIt
 
                 var model = compilation.GetSemanticModel(sourceTree);
 
-                var invokedMethodsOfMocks = node.DescendantNodes().OfType<MemberAccessExpressionSyntax>().SelectMany(
-                    x =>
-                    {
-                        var symb = model.GetSymbolInfo(x).Symbol as IPropertySymbol;
-                        return symb != null ? new[] {symb.GetMethod, symb.SetMethod} : Enumerable.Empty<IMethodSymbol>();
-                    }).Concat( node.DescendantNodes()
-                    .OfType<InvocationExpressionSyntax>()
-                    .Select(x => (IMethodSymbol)model.GetSymbolInfo(x.Expression).Symbol))
+                var descendants = node.DescendantNodes().ToArray();
+
+                var propertyGetSetSymbols = descendants.OfType<MemberAccessExpressionSyntax>()
+                                                       .SelectMany(x =>
+                                                       {
+                                                           var symb = model.GetSymbolInfo(x).Symbol as IPropertySymbol;
+                                                           return symb != null 
+                                                                    ? new[] { symb.GetMethod, symb.SetMethod } 
+                                                                    : Enumerable.Empty<IMethodSymbol>();
+                                                       });
+
+                var methodInvokationSymbols = descendants.OfType<InvocationExpressionSyntax>()
+                                                         .Select(x => (IMethodSymbol)model.GetSymbolInfo(x.Expression).Symbol);
+
+                var invokedMethodsOfMocks = propertyGetSetSymbols.Concat(methodInvokationSymbols)
                     .Where(x => x != null)
-                    .Select(
-                        x =>
-                            new
+                    .Select(x => new 
                             {
-                                MethodSymbol = x,
-                                FieldsToSetup =
-                                    suitableSut.DeclaredFields.Where(
-                                        z =>
-                                            (z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
-                                                                                      .Arguments
-                                                                                      .Any(y => obj.SemanticModel.GetSymbolInfo(y).Symbol.ToString() == x.ReceiverType.ToString() || (obj.SemanticModel.GetSymbolInfo(y).Symbol as INamedTypeSymbol)?.ConstructedFrom.ToString() == x.ReceiverType.ToString()) 
-                                                                                     ?? false)
-                                        .SelectMany(z => z.Declaration.Variables.Select(f => f.Identifier.ValueText))
-                                        .ToArray()
+                                MethodOrPropertySymbol = x,
+                                FieldsToSetup = suitableSut.DeclaredFields
+                                                           .Where(IsCorrespondingField(obj.SemanticModel, x))
+                                                           .SelectMany(z => z.Declaration.Variables.Select(f => f.Identifier.ValueText))
+                                                           .ToArray()
                             })
                     .Where(x => x.FieldsToSetup.Any())
                     .ToArray();
                 
 
 
-                if (invokedMethodsOfMocks.Length == 0 || expression.Parents(n => n is BlockSyntax)?
-                                                                   .DescendantNodes()
-                                                                   .OfType<InvocationExpressionSyntax>()
-                                                                   .Select(x => x.ToString())
-                                                                   .Any(x => invokedMethodsOfMocks.SelectMany(y => y.FieldsToSetup)
-                                                                                                  .Any(e => x.StartsWith(e + ".Setup"))) == true)
-                {
+                if(IsNotExpresisonNeedsToMock(invokedMethodsOfMocks.SelectMany(y => y.FieldsToSetup), expression))
                     continue;
-                }
 
                 obj.ReportDiagnostic(Diagnostic.Create(Rule, expression.Parent.GetLocation()));
             }
         }
-       
+
+        private static bool IsNotExpresisonNeedsToMock(IEnumerable<string> mocksInvokations, SyntaxNode expression)
+        {
+            return expression.Parents(n => n is BlockSyntax)
+                             ?.DescendantNodes()
+                             .OfType<InvocationExpressionSyntax>()
+                             .Select(x => x.ToString())
+                             .Any(x => mocksInvokations.Any(e => x.StartsWith(e + ".Setup"))) == true;
+        }
+
+        private static Func<FieldDeclarationSyntax, bool> IsCorrespondingField(SemanticModel semanticModel, IMethodSymbol x)
+        {
+            return z => (z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
+                                                                  .Arguments
+                                                                  .Any(y => semanticModel.GetSymbolInfo(y).Symbol.ToString() == x.ReceiverType.ToString() 
+                                                                            || (semanticModel.GetSymbolInfo(y).Symbol as INamedTypeSymbol)?.ConstructedFrom.ToString() == x.ReceiverType.ToString()) 
+                    ?? false;
+        }
     }
 }

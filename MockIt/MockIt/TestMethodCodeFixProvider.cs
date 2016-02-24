@@ -112,9 +112,9 @@ namespace MockIt
 
             var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(node, methods, isLeftSideOfAssignExpression);
 
-            var invoks = methods.Concat(properties).ToArray();
+            var methodsAndPropertyInvokations = methods.Concat(properties).ToArray();
 
-            var invokedMethodsOfMocks = GetInvokedMethodsOfMocks(invoks, 
+            var invokedMethodsOfMocks = GetInvokedMethodsOfMocks(methodsAndPropertyInvokations, 
                                                                  model, 
                                                                  suitableSut, 
                                                                  semanticModel, 
@@ -177,25 +177,25 @@ namespace MockIt
         }
 
         private static Fields[] GetInvokedMethodsOfMocks(
-            IEnumerable<ExpressionSyntax> invoks, 
+            IEnumerable<ExpressionSyntax> methodsAndPropertyInvokations, 
             SemanticModel model, 
             SutInfo suitableSut,
             SemanticModel semanticModel, 
             Dictionary<string, ITypeSymbol> sutSubstitutions)
         {
-            var invokedMethodsOfMocks = invoks.Select(x => new
-                                                      {
-                                                          model.GetSymbolInfo(x).Symbol,
-                                                          Expression = x
-                                                      })
-                                              .Select(x => new Fields
-                                                      {
-                                                           Expression = x.Expression,
-                                                           MethodOrPropertySymbol = x.Symbol,
-                                                           FieldsToSetup = GetFieldsToSetup(suitableSut, semanticModel, x.Symbol, sutSubstitutions)
-                                                      })
-                                              .Where(x => x.FieldsToSetup.Any())
-                                              .ToArray();
+            var invokedMethodsOfMocks = methodsAndPropertyInvokations.Select(x => new
+                                                                             {
+                                                                                 model.GetSymbolInfo(x).Symbol,
+                                                                                 Expression = x
+                                                                             })
+                                                                     .Select(x => new Fields
+                                                                             {
+                                                                                 Expression = x.Expression,
+                                                                                 MethodOrPropertySymbol = x.Symbol,
+                                                                                 FieldsToSetup = GetFieldsToSetup(suitableSut, semanticModel, x.Symbol, sutSubstitutions)
+                                                                             })
+                                                                     .Where(x => x.FieldsToSetup.Any())
+                                                                     .ToArray();
             return invokedMethodsOfMocks;
         }
 
