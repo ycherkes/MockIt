@@ -99,15 +99,13 @@ namespace MockIt
 
                 var model = compilation.GetSemanticModel(sourceTree);
 
-                var count = 0;
-
                 var allNodes = new[] {node};
 
                 var descendants = allNodes.SelectMany(nod => nod.DescendantNodes()).ToArray();
 
                 var allSymbols = Enumerable.Empty<IMethodSymbol>().ToList();
 
-                count = int.MaxValue;
+                var count = int.MaxValue;
 
                 while (count != allSymbols.Count)
                 {
