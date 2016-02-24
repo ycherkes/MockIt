@@ -116,8 +116,6 @@ namespace MockIt
                 var allSymbols = propertyGetSetSymbols.Concat(methodInvokationSymbols);
 
                 var fieldsToSetup = GetFieldsToSetup(semanticModel, allSymbols, suitableSut);
-                
-
 
                 if(IsNotExpresisonNeedsToMock(fieldsToSetup, expression))
                     continue;
