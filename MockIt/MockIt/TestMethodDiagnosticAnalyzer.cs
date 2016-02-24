@@ -124,7 +124,7 @@ namespace MockIt
             }
         }
 
-        private static IEnumerable<string> GetFieldsToSetup(SemanticModel semanticModel, IEnumerable<IMethodSymbol> methodSymbols, SutInfo suitableSut)
+        private static IReadOnlyCollection<string> GetFieldsToSetup(SemanticModel semanticModel, IEnumerable<IMethodSymbol> methodSymbols, SutInfo suitableSut)
         {
             return methodSymbols.SelectMany(x =>  suitableSut.DeclaredFields
                                                              .Where(IsCorrespondingField(semanticModel, x))
@@ -133,13 +133,14 @@ namespace MockIt
                                 .ToArray();
         }
 
-        private static bool IsNotExpresisonNeedsToMock(IEnumerable<string> mocksInvokations, SyntaxNode expression)
+        private static bool IsNotExpresisonNeedsToMock(IReadOnlyCollection<string> mocksInvokations, SyntaxNode expression)
         {
-            return expression.Parents(n => n is BlockSyntax)
-                             ?.DescendantNodes()
-                             .OfType<InvocationExpressionSyntax>()
-                             .Select(x => x.ToString())
-                             .Any(x => mocksInvokations.Any(e => x.StartsWith(e + ".Setup"))) == true;
+            return mocksInvokations.Count == 0
+                    || expression.Parents(n => n is BlockSyntax)
+                                  ?.DescendantNodes()
+                                  .OfType<InvocationExpressionSyntax>()
+                                  .Select(x => x.ToString())
+                                  .Any(x => mocksInvokations.Any(e => x.StartsWith(e + ".Setup"))) == true;
         }
 
         private static Func<FieldDeclarationSyntax, bool> IsCorrespondingField(SemanticModel semanticModel, IMethodSymbol x)
