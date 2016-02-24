@@ -99,21 +99,38 @@ namespace MockIt
 
                 var model = compilation.GetSemanticModel(sourceTree);
 
-                var descendants = node.DescendantNodes().ToArray();
+                var count = 0;
 
-                var propertyGetSetSymbols = descendants.OfType<MemberAccessExpressionSyntax>()
-                                                       .SelectMany(x =>
-                                                       {
-                                                           var symb = model.GetSymbolInfo(x).Symbol as IPropertySymbol;
-                                                           return symb != null 
-                                                                    ? new[] { symb.GetMethod, symb.SetMethod } 
-                                                                    : Enumerable.Empty<IMethodSymbol>();
-                                                       });
+                var allNodes = new[] {node};
 
-                var methodInvokationSymbols = descendants.OfType<InvocationExpressionSyntax>()
-                                                         .Select(x => (IMethodSymbol)model.GetSymbolInfo(x.Expression).Symbol);
+                var descendants = allNodes.SelectMany(nod => nod.DescendantNodes()).ToArray();
 
-                var allSymbols = propertyGetSetSymbols.Concat(methodInvokationSymbols);
+                var allSymbols = Enumerable.Empty<IMethodSymbol>().ToList();
+
+                count = int.MaxValue;
+
+                while (count != allSymbols.Count)
+                {
+                    count = allSymbols.Count;
+
+                    var propertyGetSetSymbols = descendants.OfType<MemberAccessExpressionSyntax>()
+                        .SelectMany(x =>
+                        {
+                            var symb = model.GetSymbolInfo(x).Symbol as IPropertySymbol;
+                            return symb != null
+                                ? new[] {symb.GetMethod, symb.SetMethod}
+                                : Enumerable.Empty<IMethodSymbol>();
+                        });
+
+                    var methodInvokationSymbols = descendants.OfType<InvocationExpressionSyntax>()
+                        .Select(x => (IMethodSymbol) model.GetSymbolInfo(x.Expression).Symbol);
+
+                    allSymbols.AddRange(propertyGetSetSymbols.Concat(methodInvokationSymbols));
+
+                    allSymbols = allSymbols.Distinct().ToList();
+
+                    descendants = allSymbols.SelectMany(nod => nod.DeclaringSyntaxReferences.SelectMany(x => x.GetSyntax().DescendantNodes())).ToArray();
+                }
 
                 var fieldsToSetup = GetFieldsToSetup(semanticModel, allSymbols, suitableSut);
 
