@@ -16,6 +16,7 @@
 // The latest version of this file can be found at https://github.com/ycherkes/MockIt
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
@@ -108,13 +109,30 @@ namespace MockIt
 
             var model = compilation.GetSemanticModel(sourceTree);
 
-            var methods = TestSemanticHelper.GetMethodsToConfigureMocks(node);
+            var allNodes = node.DescendantNodesAndSelf().ToList();
 
-            var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(node, methods, isLeftSideOfAssignExpression);
+            var allSyntax = Enumerable.Empty<ExpressionSyntax>().ToList();
 
-            var methodsAndPropertyInvokations = methods.Concat(properties).ToArray();
+            var count = int.MaxValue;
 
-            var invokedMethodsOfMocks = GetInvokedMethodsOfMocks(methodsAndPropertyInvokations, 
+            while (count != allSyntax.Count)
+            {
+                count = allSyntax.Count;
+
+                var methods = TestSemanticHelper.GetMethodsToConfigureMocks(allNodes);
+
+                var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(allNodes, methods,
+                    isLeftSideOfAssignExpression);
+
+                allSyntax.AddRange(methods.Concat(properties).Distinct());
+                allSyntax = allSyntax.Distinct().ToList();
+
+                allNodes = allSyntax.SelectMany(syn  => syn.DescendantNodesAndSelf())
+                                    .SelectMany(x => GetReferencedNodes(x, model))
+                                    .ToList();
+            }
+
+            var invokedMethodsOfMocks = GetInvokedMethodsOfMocks(allSyntax, 
                                                                  model, 
                                                                  suitableSut, 
                                                                  semanticModel, 
@@ -123,6 +141,18 @@ namespace MockIt
             ChangesMaker.ApplyChanges(invokationSyntax, editor, invokedMethodsOfMocks);
 
             return editor.GetChangedDocument();
+        }
+
+        private static IEnumerable<SyntaxNode> GetReferencedNodes(SyntaxNode node, SemanticModel model)
+        {
+            var symbol = model.GetSymbolInfo(node).Symbol;
+
+            if (symbol == null)
+                return Enumerable.Empty<SyntaxNode>();
+
+            return symbol.DeclaringSyntaxReferences
+                         .SelectMany(z => z.GetSyntax()
+                         .DescendantNodes());
         }
 
         private static Fields[] GetInvokedMethodsOfMocks(

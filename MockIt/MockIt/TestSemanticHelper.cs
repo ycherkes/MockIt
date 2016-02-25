@@ -47,11 +47,20 @@ namespace MockIt
             return properties;
         }
 
-        public static ExpressionSyntax[] GetMethodsToConfigureMocks(IEnumerable<SyntaxNode> nodes)
-        {
-            var methods = nodes.SelectMany(GetMethodsToConfigureMocks).ToArray();
+        //public static ExpressionSyntax[] GetMethodsToConfigureMocks(IEnumerable<SyntaxNode> nodes)
+        //{
+        //    var methods = nodes.SelectMany(GetMethodsToConfigureMocks).ToArray();
 
-            return methods;
+        //    return methods;
+        //}
+
+        public static IEnumerable<MemberAccessExpressionSyntax> GetPropertiesToConfigureMocks(IEnumerable<SyntaxNode> nodes,
+            IEnumerable<ExpressionSyntax> methods, bool isLeftSideOfAssignExpression)
+        {
+            var properties = nodes.SelectMany(node => GetPropertiesToConfigureMocks(node, methods, isLeftSideOfAssignExpression))
+                                  .ToArray();
+
+            return properties;
         }
 
         public static IEnumerable<MemberAccessExpressionSyntax> GetPropertiesToConfigureMocks(SyntaxNode node,
@@ -65,22 +74,25 @@ namespace MockIt
                 var getter = accessors.FirstOrDefault(ad => ad.Kind() == SyntaxKind.GetAccessorDeclaration);
                 var setter = accessors.FirstOrDefault(ad => ad.Kind() == SyntaxKind.SetAccessorDeclaration);
 
-                node = (isLeftSideOfAssignExpression ? setter : getter);
+                node = isLeftSideOfAssignExpression ? setter : getter;
+
+                if (node == null)
+                    return Enumerable.Empty<MemberAccessExpressionSyntax>();
             }
 
             var properties = node.DescendantNodes()
-                    .OfType<MemberAccessExpressionSyntax>()
-                    .Where(expr => !expr.DescendantNodes(methods.Contains).Any())
-                    .ToArray();
+                                 .OfType<MemberAccessExpressionSyntax>()
+                                 .Where(expr => !expr.DescendantNodes(methods.Contains).Any())
+                                 .ToArray();
 
             return properties;
         }
 
-        public static ExpressionSyntax[] GetMethodsToConfigureMocks(SyntaxNode node)
+        public static ExpressionSyntax[] GetMethodsToConfigureMocks(IEnumerable<SyntaxNode> nodes)
         {
-            var methods = node.DescendantNodes()
-                .OfType<InvocationExpressionSyntax>()
-                .Select(expr => expr.Expression).ToArray();
+            var methods = nodes.SelectMany(x => x.DescendantNodes())
+                               .OfType<InvocationExpressionSyntax>()
+                               .Select(expr => expr.Expression).ToArray();
 
             return methods;
         }
