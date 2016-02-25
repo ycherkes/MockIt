@@ -16,7 +16,6 @@
 // The latest version of this file can be found at https://github.com/ycherkes/MockIt
 #endregion
 
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
