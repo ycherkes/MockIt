@@ -16,6 +16,11 @@ namespace MockIt
             return methods.FirstOrDefault();
         }
 
+        public static SemanticModel GetModelFromNode(this SyntaxNode node, IEnumerable<SemanticModel> semanticModels)
+        {
+            return semanticModels.FirstOrDefault(x => x.SyntaxTree == node.SyntaxTree);
+        }
+
         public static MethodDeclarationSyntax[] GetTestMethods(SemanticModel semanticModel)
         {
             var methodDecls = GetMethodsWithAttributes(semanticModel, "Test", "TestMethod");
@@ -185,6 +190,30 @@ namespace MockIt
         private static bool IsSuitableDeclaredField(BaseFieldDeclarationSyntax z, ArgumentSyntax y)
         {
             return new[] { z.Declaration.Variables.FirstOrDefault()?.Identifier.Text + ".Object", z.Declaration.Variables.FirstOrDefault()?.Identifier.Text }.Contains(y.Expression.GetText().ToString().Trim());
+        }
+
+        public static Dictionary<string, ITypeSymbol> GetSubstitutions(ISymbol symbol)
+        {
+            var namedTypeSymbol = symbol as INamedTypeSymbol;
+
+            var emptyDictionary = new Dictionary<string, ITypeSymbol>();
+
+            if (namedTypeSymbol == null) return emptyDictionary;
+
+            var typeParameters = namedTypeSymbol.TypeParameters;
+            var typeArguments = namedTypeSymbol.TypeArguments;
+
+            if (typeParameters.Length == 0 || typeArguments.Length == 0)
+                return emptyDictionary;
+
+            var typeMap = typeParameters.Zip(typeArguments, (parameterSymbol, typeSymbol) => new
+            {
+                Key = parameterSymbol,
+                Value = typeSymbol
+            })
+                .ToDictionary(pair => pair.Key.ToString(), pair => pair.Value);
+
+            return typeMap;
         }
     }
 }

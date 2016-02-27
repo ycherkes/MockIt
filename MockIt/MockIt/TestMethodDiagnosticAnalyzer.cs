@@ -50,8 +50,8 @@ namespace MockIt
 
         private static void AnalyzeSemantic(SemanticModelAnalysisContext semanticContext)
         {
-            var semanticModel = semanticContext.SemanticModel;
-            var methodDecls = TestSemanticHelper.GetTestMethods(semanticModel);
+            var testSemanticModel = semanticContext.SemanticModel;
+            var methodDecls = TestSemanticHelper.GetTestMethods(testSemanticModel);
 
             var methods = TestSemanticHelper.GetMethodsToConfigureMocks(methodDecls);
 
@@ -62,17 +62,17 @@ namespace MockIt
             if (!expressions.Any())
                 return;
 
-            var testInitMethodDecl = TestSemanticHelper.GetTestInitializeMethod(semanticModel);
+            var testInitMethodDecl = TestSemanticHelper.GetTestInitializeMethod(testSemanticModel);
 
             if (testInitMethodDecl == null) return;
 
             var declaredFields = testInitMethodDecl.Parent.ChildNodes().OfType<FieldDeclarationSyntax>();
 
-            var suts = testInitMethodDecl.GetSuts(semanticModel, declaredFields);
+            var suts = testInitMethodDecl.GetSuts(testSemanticModel, declaredFields);
 
             foreach (var expression in expressions)
             {
-                var symbol = semanticModel.GetSymbolInfo(expression).Symbol;
+                var symbol = testSemanticModel.GetSymbolInfo(expression).Symbol;
 
                 if(symbol == null)
                     continue;
@@ -93,11 +93,11 @@ namespace MockIt
                 var node = parentNode.FirstAncestorOrSelf<MethodDeclarationSyntax>() as MemberDeclarationSyntax 
                             ?? parentNode.FirstAncestorOrSelf<PropertyDeclarationSyntax>();
 
-                var compilation = TestSemanticHelper.GetCompilation(suitableSutMember, semanticModel);
+                var compilation = TestSemanticHelper.GetCompilation(suitableSutMember, testSemanticModel);
 
                 if(compilation == null) return;
 
-                var model = compilation.GetSemanticModel(sourceTree);
+                var sutSemanticModel = compilation.GetSemanticModel(sourceTree);
 
                 var allNodes = new[] {node};
 
@@ -114,23 +114,24 @@ namespace MockIt
                     var propertyGetSetSymbols = descendants.OfType<MemberAccessExpressionSyntax>()
                         .SelectMany(x =>
                         {
-                            var symb = model.GetSymbolInfo(x).Symbol as IPropertySymbol;
+                            var sm = x.GetModelFromNode(new[] {sutSemanticModel, testSemanticModel});
+                            var symb = sm?.GetSymbolInfo(x).Symbol as IPropertySymbol;
                             return symb != null
                                 ? new[] {symb.GetMethod, symb.SetMethod}
                                 : Enumerable.Empty<IMethodSymbol>();
                         });
 
                     var methodInvokationSymbols = descendants.OfType<InvocationExpressionSyntax>()
-                        .Select(x => (IMethodSymbol) model.GetSymbolInfo(x.Expression).Symbol);
+                        .Select(x =>  (IMethodSymbol)x.GetModelFromNode(new[] { sutSemanticModel, testSemanticModel })?.GetSymbolInfo(x.Expression).Symbol);
 
                     allSymbols.AddRange(propertyGetSetSymbols.Concat(methodInvokationSymbols));
 
-                    allSymbols = allSymbols.Distinct().ToList();
+                    allSymbols = allSymbols.Where(x => x != null).Distinct().ToList();
 
                     descendants = allSymbols.SelectMany(nod => nod.DeclaringSyntaxReferences.SelectMany(x => x.GetSyntax().DescendantNodes())).ToArray();
                 }
 
-                var fieldsToSetup = GetFieldsToSetup(semanticModel, allSymbols, suitableSut);
+                var fieldsToSetup = GetFieldsToSetup(testSemanticModel, allSymbols, suitableSut);
 
                 if(IsNotExpresisonNeedsToMock(fieldsToSetup, expression))
                     continue;

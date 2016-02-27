@@ -90,7 +90,9 @@ namespace MockIt
 
             var suitableSut = refType.GetSuitableSut(suts);
 
-            var sutSubstitutions = GetSubstitutions(refType);
+            if (suitableSut == null) return document;
+
+            var sutSubstitutions = TestSemanticHelper.GetSubstitutions(refType);
 
             var suitableSutMember = suitableSut.GetSuitableSutMember(symbol);
 
@@ -241,31 +243,7 @@ namespace MockIt
         private static Dictionary<string, ITypeSymbol> GetSubstitutions(SemanticModel semanticModel, ExpressionSyntax y)
         {
             var symbol = semanticModel.GetSymbolInfo(y).Symbol;
-            return GetSubstitutions(symbol);
-        }
-
-        private static Dictionary<string, ITypeSymbol> GetSubstitutions(ISymbol symbol)
-        {
-            var namedTypeSymbol = symbol as INamedTypeSymbol;
-
-            var emptyDictionary = new Dictionary<string, ITypeSymbol>();
-
-            if (namedTypeSymbol == null) return emptyDictionary;
-
-            var typeParameters = namedTypeSymbol.TypeParameters;
-            var typeArguments = namedTypeSymbol.TypeArguments;
-
-            if (typeParameters.Length == 0 || typeArguments.Length == 0)
-                return emptyDictionary;
-
-            var typeMap = typeParameters.Zip(typeArguments, (parameterSymbol, typeSymbol) => new
-                                                            {
-                                                                Key = parameterSymbol,
-                                                                Value = typeSymbol
-                                                            })
-                                        .ToDictionary(pair => pair.Key.ToString(), pair => pair.Value);
-
-            return typeMap;
+            return TestSemanticHelper.GetSubstitutions(symbol);
         }
     }
 }

@@ -57,7 +57,7 @@ namespace MockIt
                                                                           GetSimpleTypeName(y.Substitutions,
                                                                               y.SutSubstitutions, z.Type) +
                                                                           "))")) + "))" +
-                    (methodSymbol.ReturnType.ToDisplayString() != "void"
+                    (methodSymbol.ReturnType.ToDisplayString() != "void" //todo: to rigth determine generic return type
                         ? ".Returns(default(" +
                           GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, methodSymbol.ReturnType) +
                           "))"
