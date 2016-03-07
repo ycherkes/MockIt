@@ -45,25 +45,22 @@ namespace MockIt
 
             if (methodSymbol != null)
             {
-                ////todo: determine the generic replacements correctly by semantic model from sut
+                //todo: determine the generic replacements correctly by semantic model from sut
+                
                 var returnType = GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, methodSymbol.ReturnType);
-                if (methodSymbol.ReturnType.ToDisplayString() != "void")
+                if (methodSymbol.ReturnType.ToDisplayString() != "void" 
+                        && methodSymbol.ReturnType.IsAbstract
+                        && methodSymbol.IsGenericMethod)
                 {
+                    var symbolDefinitionsReplacement = TestSemanticHelper.GetReplacedDefinitions(y.SutSubstitutions, methodSymbol.ReturnType);
 
-                    if (methodSymbol.ReturnType.IsAbstract && methodSymbol.IsGenericMethod)
+                    var definitionsReplacement = symbolDefinitionsReplacement as string[] ??
+                                                 symbolDefinitionsReplacement.ToArray();
+
+                    if (definitionsReplacement.Any())
                     {
-                        var symbolDefinitionsReplacement = TestSemanticHelper.GetReplacedDefinitions(
-                            y.SutSubstitutions, methodSymbol.ReturnType);
-
-                        var definitionsReplacement = symbolDefinitionsReplacement as string[] ?? symbolDefinitionsReplacement.ToArray();
-                        if (definitionsReplacement.Any())
-                        {
-                            returnType = definitionsReplacement.First();
-                        }
-
+                        returnType = definitionsReplacement.First();
                     }
-
-
                 }
 
                 return new[]
