@@ -46,7 +46,7 @@ namespace MockIt
             if (methodSymbol != null)
             {
                 ////todo: determine the generic replacements correctly by semantic model from sut
-                var returnType = TestSemanticHelper.GetSimpleTypeName(methodSymbol.ReturnType);
+                var returnType = GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, methodSymbol.ReturnType);
                 if (methodSymbol.ReturnType.ToDisplayString() != "void")
                 {
 
@@ -62,6 +62,7 @@ namespace MockIt
                         }
 
                     }
+
 
                 }
 

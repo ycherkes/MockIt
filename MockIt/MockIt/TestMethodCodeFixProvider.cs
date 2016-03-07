@@ -222,14 +222,11 @@ namespace MockIt
 
             var symbolDefinitionsReplacement = TestSemanticHelper.GetReplacedDefinitions(sutSubstitutions, x.ContainingType);
 
-            if (methodSymbol != null)
-            {
-                return symbol.ToString() == methodSymbol.ReceiverType.ToString() 
-                        || symbolDefinitionsReplacement.Contains(symbol.ToString());
-            }
-
-            return symbol.ToString() == propertySymbol?.ContainingType.ToString() 
-                    || symbolDefinitionsReplacement.Contains(symbol.ToString());
+            var ct = methodSymbol != null ? methodSymbol.ReceiverType : propertySymbol?.ContainingType;
+            var ctName = TestSemanticHelper.GetSimpleTypeName(ct);
+            
+            return TestSemanticHelper.GetSimpleTypeName(symbol) == ctName
+                    || symbolDefinitionsReplacement.Contains(TestSemanticHelper.GetSimpleTypeName(symbol));
         }
 
         private static Dictionary<string, ITypeSymbol> GetSubstitutions(SemanticModel semanticModel, ExpressionSyntax y)
