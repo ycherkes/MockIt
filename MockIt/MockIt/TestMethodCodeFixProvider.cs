@@ -146,14 +146,23 @@ namespace MockIt
 
         private static IEnumerable<SyntaxNode> GetReferencedNodes(SyntaxNode node, SemanticModel model)
         {
-            var symbol = model.GetSymbolInfo(node).Symbol;
+            try
+            {
+                var symbol = model.GetSymbolInfo(node).Symbol;
 
-            if (symbol == null)
+
+                if (symbol == null)
+                    return Enumerable.Empty<SyntaxNode>();
+
+                return symbol.DeclaringSyntaxReferences
+                    .SelectMany(z => z.GetSyntax()
+                        .DescendantNodes());
+            }
+            //todo: determine the semantic model correctly
+            catch
+            {
                 return Enumerable.Empty<SyntaxNode>();
-
-            return symbol.DeclaringSyntaxReferences
-                         .SelectMany(z => z.GetSyntax()
-                         .DescendantNodes());
+            }
         }
 
         private static Fields[] GetInvokedMethodsOfMocks(
@@ -211,33 +220,16 @@ namespace MockIt
             var methodSymbol = x as IMethodSymbol;
             var propertySymbol = x as IPropertySymbol;
 
+            var symbolDefinitionsReplacement = TestSemanticHelper.GetReplacedDefinitions(sutSubstitutions, x.ContainingType);
+
             if (methodSymbol != null)
             {
-                var methodDefinitionsReplacement = GetReplacedDefinitions(sutSubstitutions, methodSymbol);
                 return symbol.ToString() == methodSymbol.ReceiverType.ToString() 
-                        || methodDefinitionsReplacement.Contains(symbol.ToString());
+                        || symbolDefinitionsReplacement.Contains(symbol.ToString());
             }
 
-            var propertyDefinitionsReplacement = GetReplacedDefinitions(sutSubstitutions, propertySymbol);
-
             return symbol.ToString() == propertySymbol?.ContainingType.ToString() 
-                    || propertyDefinitionsReplacement.Contains(symbol.ToString());
-        }
-
-        private static IEnumerable<string> GetReplacedDefinitions(IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions, ISymbol propertySymbol)
-        {
-            var replacements = sutSubstitutions.Select(kv => new[]
-            {
-                new {Original = "<" + kv.Key + ">", Replacement = "<" + kv.Value + ">"},
-                new {Original = "<" + kv.Key + ",", Replacement = "<" + kv.Value + ","},
-                new {Original = ", " + kv.Key + ",", Replacement = ", " + kv.Value + ","},
-                new {Original = ", " + kv.Key + ">", Replacement = ", " + kv.Value + ">"}
-            });
-
-            var originalType = propertySymbol.ContainingType.ToString();
-
-            var replacedDefinition = replacements.Select(s => s.Aggregate(originalType, (sum, repl) => sum.Replace(repl.Original, repl.Replacement)));
-            return replacedDefinition;
+                    || symbolDefinitionsReplacement.Contains(symbol.ToString());
         }
 
         private static Dictionary<string, ITypeSymbol> GetSubstitutions(SemanticModel semanticModel, ExpressionSyntax y)

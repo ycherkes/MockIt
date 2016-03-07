@@ -192,6 +192,22 @@ namespace MockIt
             return new[] { z.Declaration.Variables.FirstOrDefault()?.Identifier.Text + ".Object", z.Declaration.Variables.FirstOrDefault()?.Identifier.Text }.Contains(y.Expression.GetText().ToString().Trim());
         }
 
+        public static IEnumerable<string> GetReplacedDefinitions(IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions, ISymbol typeSymbol)
+        {
+            var replacements = sutSubstitutions.Select(kv => new[]
+            {
+                new {Original = "<" + kv.Key + ">", Replacement = "<" + GetSimpleTypeName(kv.Value) + ">"},
+                new {Original = "<" + kv.Key + ",", Replacement = "<" + GetSimpleTypeName(kv.Value) + ","},
+                new {Original = ", " + kv.Key + ",", Replacement = ", " + GetSimpleTypeName(kv.Value) + ","},
+                new {Original = ", " + kv.Key + ">", Replacement = ", " + GetSimpleTypeName(kv.Value) + ">"}
+            });
+
+            var originalType = GetSimpleTypeName(typeSymbol);
+
+            var replacedDefinition = replacements.Select(s => s.Aggregate(originalType, (sum, repl) => sum.Replace(repl.Original, repl.Replacement)));
+            return replacedDefinition;
+        }
+
         public static Dictionary<string, ITypeSymbol> GetSubstitutions(ISymbol symbol)
         {
             var namedTypeSymbol = symbol as INamedTypeSymbol;
