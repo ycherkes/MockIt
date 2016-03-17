@@ -71,6 +71,7 @@ namespace MockIt
 
             var suts = testInitMethodDecl.GetSuts(testSemanticModel, declaredFields);
 
+            //todo handle the case when: _sut.List().Result instead of _sut.List()
             var memberAccessExpresion = invokationSyntax.DescendantNodes()
                                                         .OfType<ExpressionSyntax>()
                                                         .Where(x => x is InvocationExpressionSyntax || x is MemberAccessExpressionSyntax)
