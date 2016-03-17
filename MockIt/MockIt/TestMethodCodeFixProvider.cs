@@ -63,7 +63,6 @@ namespace MockIt
             CancellationToken cancellationToken)
         {
             var testSemanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
-            var editor = await DocumentEditor.CreateAsync(document, cancellationToken).ConfigureAwait(false);
 
             var testInitMethodDecl = TestSemanticHelper.GetTestInitializeMethod(testSemanticModel);
 
@@ -130,6 +129,8 @@ namespace MockIt
                                                                  suitableSut, 
                                                                  testSemanticModel, 
                                                                  sutSubstitutions);
+
+            var editor = await DocumentEditor.CreateAsync(document, cancellationToken).ConfigureAwait(false);
 
             ChangesMaker.ApplyChanges(invokationSyntax, editor, invokedMethodsOfMocks);
 
