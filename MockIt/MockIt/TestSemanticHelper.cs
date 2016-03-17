@@ -107,18 +107,50 @@ namespace MockIt
             return type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
         }
 
-        public static Compilation GetCompilation(ISymbol suitableSutMember, SemanticModel semanticModel)
+        public static Compilation GetCompilation(this SemanticModel semanticModel, ISymbol suitableSutMember)
         {
-            var compilation = suitableSutMember.ContainingSymbol.ContainingAssembly.Name ==
-                              semanticModel.Compilation.Assembly.Name
+            var compilation = IsAssembliesEqual(suitableSutMember, semanticModel)
                 ? semanticModel.Compilation
-                : semanticModel.Compilation
-                               .ExternalReferences
-                               .OfType<CompilationReference>()
-                               .Select(x => x.Compilation)
-                               .FirstOrDefault(x => x.Assembly.Name == suitableSutMember.ContainingSymbol.ContainingAssembly.Name);
+                : GetExternalCompilation(semanticModel.Compilation, suitableSutMember);
 
             return compilation;
+        }
+
+        public static Compilation GetExternalCompilation(this Compilation compilation, ISymbol suitableSutMember)
+        {
+            return compilation.ExternalReferences
+                              .OfType<CompilationReference>()
+                              .Select(x => x.Compilation)
+                              .FirstOrDefault(x => IsAssembliesEqual(x.Assembly, suitableSutMember.ContainingSymbol.ContainingAssembly));
+        }
+
+        public static MemberDeclarationSyntax GetMemberNode(this Location location)
+        {
+            var sourceTree = location.SourceTree;
+            var treeRoot = sourceTree.GetRoot();
+            var position = location.SourceSpan.Start;
+            var parentNode = treeRoot.FindToken(position).Parent;
+            var node = parentNode.FirstAncestorOrSelf<MethodDeclarationSyntax>() as MemberDeclarationSyntax
+                       ?? parentNode.FirstAncestorOrSelf<PropertyDeclarationSyntax>();
+
+            return node;
+        }
+
+        public static SemanticModel GetSutSemanticModel(SemanticModel testSemanticModel, ISymbol suitableSutSymbol, Location sutFirstLocation)
+        {
+            var compilation = testSemanticModel.GetCompilation(suitableSutSymbol);
+            var sutSemanticModel = compilation?.GetSemanticModel(sutFirstLocation.SourceTree);
+            return sutSemanticModel;
+        }
+
+        private static bool IsAssembliesEqual(ISymbol sutSymbol, SemanticModel semanticModel)
+        {
+            return IsAssembliesEqual(sutSymbol.ContainingSymbol.ContainingAssembly, semanticModel.Compilation.Assembly);
+        }
+
+        private static bool IsAssembliesEqual(IAssemblySymbol firstSymbol, IAssemblySymbol secondSymbol)
+        {
+            return firstSymbol.Name == secondSymbol.Name;
         }
 
         public static IReadOnlyCollection<SutInfo> GetSuts(this SyntaxNode testInitMethodDecl, SemanticModel semanticModel,
@@ -168,7 +200,7 @@ namespace MockIt
             }
         }
 
-        public static ISymbol GetSuitableSutMember(this SutInfo suitableSut, ISymbol memberSymbol)
+        public static ISymbol GetSuitableSutSymbol(this SutInfo suitableSut, ISymbol memberSymbol)
         {
             var suitableSutMember =
                 ((INamedTypeSymbol)suitableSut.SymbolInfo.Symbol).FindImplementationForInterfaceMember(memberSymbol);

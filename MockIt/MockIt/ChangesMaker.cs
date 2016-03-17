@@ -12,10 +12,12 @@ namespace MockIt
     {
         private static IEnumerable<ExpressionStatementSyntax> MakeVerifiers(IEnumerable<Fields> invokedMethodsOfMocks)
         {
-            var verifiers = invokedMethodsOfMocks.SelectMany(x => x.FieldsToSetup.SelectMany(y => y.Field))
-                .Distinct()
-                .Select(x => SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(x + ".VerifyAll()")))
-                .ToArray();
+            var verifiers = invokedMethodsOfMocks.SelectMany(x => x.FieldsToSetup
+                                                                   .SelectMany(y => y.Field))
+                                                 .Distinct()
+                                                 .Select(x => SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(x + ".VerifyAll()")))
+                                                 .ToArray();
+
             return verifiers;
         }
 

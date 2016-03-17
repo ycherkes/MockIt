@@ -62,14 +62,14 @@ namespace MockIt
         private static async Task<Document> MakeMock(Document document, SyntaxNode invokationSyntax,
             CancellationToken cancellationToken)
         {
-            var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
+            var testSemanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
             var editor = await DocumentEditor.CreateAsync(document, cancellationToken).ConfigureAwait(false);
 
-            var testInitMethodDecl = TestSemanticHelper.GetTestInitializeMethod(semanticModel);
+            var testInitMethodDecl = TestSemanticHelper.GetTestInitializeMethod(testSemanticModel);
 
             var declaredFields = testInitMethodDecl.Parent.ChildNodes().OfType<FieldDeclarationSyntax>();
 
-            var suts = testInitMethodDecl.GetSuts(semanticModel, declaredFields);
+            var suts = testInitMethodDecl.GetSuts(testSemanticModel, declaredFields);
 
             var memberAccessExpresion = invokationSyntax.DescendantNodes()
                                                         .OfType<ExpressionSyntax>()
@@ -84,7 +84,7 @@ namespace MockIt
 
 
             var isLeftSideOfAssignExpression = memberAccessExpresion.IsLeftSideOfAssignExpression();
-            var symbol = semanticModel.GetSymbolInfo(memberAccessExpresion).Symbol;
+            var symbol = testSemanticModel.GetSymbolInfo(memberAccessExpresion).Symbol;
 
             var refType = symbol.ContainingType;
 
@@ -94,21 +94,14 @@ namespace MockIt
 
             var sutSubstitutions = TestSemanticHelper.GetSubstitutions(refType);
 
-            var suitableSutMember = suitableSut.GetSuitableSutMember(symbol);
+            var suitableSutSymbol = suitableSut.GetSuitableSutSymbol(symbol);
+            var sutFirstLocation = suitableSutSymbol.Locations.First();
+            var sutSemanticModel = TestSemanticHelper.GetSutSemanticModel(testSemanticModel, suitableSutSymbol, sutFirstLocation);
 
-            var sourceTree = suitableSutMember.Locations.First().SourceTree;
-            var treeRoot = sourceTree.GetRoot();
-            var position = suitableSutMember.Locations.First().SourceSpan.Start;
-            var parentToken = treeRoot.FindToken(position).Parent;
+            if (sutSemanticModel == null)
+                return document;
 
-            var node = parentToken.FirstAncestorOrSelf<MethodDeclarationSyntax>() as MemberDeclarationSyntax 
-                        ?? parentToken.FirstAncestorOrSelf<PropertyDeclarationSyntax>();
-
-            var compilation = TestSemanticHelper.GetCompilation(suitableSutMember, semanticModel);
-
-            if (compilation == null) return document;
-
-            var model = compilation.GetSemanticModel(sourceTree);
+            var node = sutFirstLocation.GetMemberNode();
 
             var allNodes = node.DescendantNodesAndSelf().ToList();
 
@@ -121,22 +114,20 @@ namespace MockIt
                 count = allSyntax.Count;
 
                 var methods = TestSemanticHelper.GetMethodsToConfigureMocks(allNodes);
-
-                var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(allNodes, methods,
-                    isLeftSideOfAssignExpression);
+                var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(allNodes, methods, isLeftSideOfAssignExpression);
 
                 allSyntax.AddRange(methods.Concat(properties).Distinct());
                 allSyntax = allSyntax.Distinct().ToList();
 
                 allNodes = allSyntax.SelectMany(syn  => syn.DescendantNodesAndSelf())
-                                    .SelectMany(x => GetReferencedNodes(x, model))
+                                    .SelectMany(x => GetReferencedNodes(x, sutSemanticModel))
                                     .ToList();
             }
 
             var invokedMethodsOfMocks = GetInvokedMethodsOfMocks(allSyntax, 
-                                                                 model, 
+                                                                 sutSemanticModel, 
                                                                  suitableSut, 
-                                                                 semanticModel, 
+                                                                 testSemanticModel, 
                                                                  sutSubstitutions);
 
             ChangesMaker.ApplyChanges(invokationSyntax, editor, invokedMethodsOfMocks);

@@ -84,20 +84,14 @@ namespace MockIt
                 if (suitableSut == null)
                     continue;
 
-                var suitableSutMember = suitableSut.GetSuitableSutMember(symbol);
+                var suitableSutSymbol = suitableSut.GetSuitableSutSymbol(symbol);
+                var sutFirstLocation = suitableSutSymbol.Locations.First();
+                var sutSemanticModel = TestSemanticHelper.GetSutSemanticModel(testSemanticModel, suitableSutSymbol, sutFirstLocation);
+                
+                if(sutSemanticModel == null)
+                    continue;
 
-                var sourceTree = suitableSutMember.Locations.First().SourceTree;
-                var treeRoot = sourceTree.GetRoot();
-                var position = suitableSutMember.Locations.First().SourceSpan.Start;
-                var parentNode = treeRoot.FindToken(position).Parent;
-                var node = parentNode.FirstAncestorOrSelf<MethodDeclarationSyntax>() as MemberDeclarationSyntax 
-                            ?? parentNode.FirstAncestorOrSelf<PropertyDeclarationSyntax>();
-
-                var compilation = TestSemanticHelper.GetCompilation(suitableSutMember, testSemanticModel);
-
-                if(compilation == null) return;
-
-                var sutSemanticModel = compilation.GetSemanticModel(sourceTree);
+                var node = sutFirstLocation.GetMemberNode();
 
                 var allNodes = new[] {node};
 
