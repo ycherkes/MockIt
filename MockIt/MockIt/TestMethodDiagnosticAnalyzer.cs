@@ -97,7 +97,7 @@ namespace MockIt
 
                 var descendants = allNodes.SelectMany(nod => nod.DescendantNodes()).ToArray();
 
-                var allSymbols = Enumerable.Empty<IMethodSymbol>().ToList();
+                var allSymbols = new List<IMethodSymbol>();
 
                 var count = int.MaxValue;
 

@@ -105,7 +105,7 @@ namespace MockIt
 
             var allNodes = node.DescendantNodesAndSelf().ToList();
 
-            var allSyntax = Enumerable.Empty<ExpressionSyntax>().ToList();
+            var allSyntax = new List<ExpressionSyntax>();
 
             var count = int.MaxValue;
 
