@@ -33,6 +33,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="ChangesMaker.cs" />
+    <Compile Include="EnumerableExtensions.cs" />
     <Compile Include="Fields.cs" />
     <Compile Include="FieldsSetups.cs" />
     <Compile Include="SutInfo.cs" />

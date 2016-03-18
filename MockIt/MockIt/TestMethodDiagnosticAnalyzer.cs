@@ -127,7 +127,7 @@ namespace MockIt
 
                 var fieldsToSetup = GetFieldsToSetup(testSemanticModel, allSymbols, suitableSut);
 
-                if(IsNotExpresisonNeedsToMock(fieldsToSetup, expression))
+                if(IsNotExpressionNeedsToMock(fieldsToSetup, expression))
                     continue;
 
                 semanticContext.ReportDiagnostic(Diagnostic.Create(Rule, expression.Parent.GetLocation()));
@@ -143,7 +143,7 @@ namespace MockIt
                                 .ToArray();
         }
 
-        private static bool IsNotExpresisonNeedsToMock(IReadOnlyCollection<string> mocksInvokations, SyntaxNode expression)
+        private static bool IsNotExpressionNeedsToMock(IReadOnlyCollection<string> mocksInvokations, SyntaxNode expression)
         {
             return mocksInvokations.Count == 0
                     || expression.Parents(n => n is BlockSyntax)

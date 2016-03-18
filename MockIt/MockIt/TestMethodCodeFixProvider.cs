@@ -71,19 +71,21 @@ namespace MockIt
             var suts = testInitMethodDecl.GetSuts(testSemanticModel, declaredFields);
 
             //todo handle the case when: _sut.List().Result instead of _sut.List()
-            var memberAccessExpresion = invokationSyntax.DescendantNodes()
-                                                        .OfType<ExpressionSyntax>()
-                                                        .Where(x => x is InvocationExpressionSyntax || x is MemberAccessExpressionSyntax)
-                                                        .Select(expr =>
-                                                        {
-                                                            var memberAccess = expr as MemberAccessExpressionSyntax;
-                                                            var invokationExpression = expr as InvocationExpressionSyntax;
-                                                            var expression = invokationExpression == null ? memberAccess : invokationExpression.Expression;
-                                                            return expression;
-                                                        }).First();
+            var memberAccessExpression = invokationSyntax.DescendantNodes()
+                .OfType<ExpressionSyntax>()
+                .Where(x => x is InvocationExpressionSyntax || x is MemberAccessExpressionSyntax)
+                .Select(expr =>
+                {
+                    var memberAccess = expr as MemberAccessExpressionSyntax;
+                    var invokationExpression = expr as InvocationExpressionSyntax;
+                    var expression = invokationExpression == null ? memberAccess : invokationExpression.Expression;
+                    return expression;
+                });//.First();
 
 
-            var invokedMethodsOfMocks = GetInvokedMethodsOfMock(memberAccessExpresion, testSemanticModel, suts);
+            var invokedMethodsOfMocks = memberAccessExpression.SelectMany(expressionSyntax => GetInvokedMethodsOfMock(expressionSyntax, testSemanticModel, suts))
+                                                              .DistinctBy(x => x.MethodOrPropertySymbol)
+                                                              .ToArray();
 
             if (invokedMethodsOfMocks.Length == 0)
                 return document;
