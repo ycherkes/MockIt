@@ -97,7 +97,7 @@ namespace MockIt
             return editor.GetChangedDocument();
         }
 
-        private static Fields[] GetInvokedMethodsOfMock(ExpressionSyntax memberAccessExpresion, SemanticModel testSemanticModel, IEnumerable<SutInfo> suts)
+        private static IEnumerable<Fields> GetInvokedMethodsOfMock(ExpressionSyntax memberAccessExpresion, SemanticModel testSemanticModel, IEnumerable<SutInfo> suts)
         {
             var isLeftSideOfAssignExpression = memberAccessExpresion.IsLeftSideOfAssignExpression();
             var symbol = testSemanticModel.GetSymbolInfo(memberAccessExpresion).Symbol;
@@ -137,8 +137,8 @@ namespace MockIt
                 allSyntax = allSyntax.Distinct().ToList();
 
                 allNodes = allSyntax.SelectMany(syn => syn.DescendantNodesAndSelf())
-                    .SelectMany(x => GetReferencedNodes(x, sutSemanticModel))
-                    .ToList();
+                                    .SelectMany(x => GetReferencedNodes(x, sutSemanticModel))
+                                    .ToList();
             }
 
             var invokedMethodsOfMocks = GetInvokedMethodsOfMocks(allSyntax,
@@ -168,7 +168,7 @@ namespace MockIt
                                            .DescendantNodes());
         }
 
-        private static Fields[] GetInvokedMethodsOfMocks(
+        private static IEnumerable<Fields> GetInvokedMethodsOfMocks(
             IEnumerable<ExpressionSyntax> methodsAndPropertyInvokations, 
             SemanticModel model, 
             SutInfo suitableSut,

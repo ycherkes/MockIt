@@ -112,7 +112,12 @@ namespace MockIt
             if(!methodSymbol.IsGenericMethod)
                 return methodSymbol.Name;
 
-            return methodSymbol.Name + "<" + Join(", ", methodSymbol.TypeParameters.Select(x => GetSimpleTypeName(substitutions, sutSubstitutions, x))) + ">";
+            return methodSymbol.Name + "<" + Join(", ", 
+                                                    methodSymbol.TypeArguments.Any() 
+                                                        ? methodSymbol.TypeArguments.Select(x => GetSimpleTypeName(substitutions, sutSubstitutions, x))
+                                                        //todo - determine is that necessary or could be removed
+                                                        : methodSymbol.TypeParameters.Select(x => GetSimpleTypeName(substitutions, sutSubstitutions, x))) 
+                  + ">";
         }
 
         private static string GetSimpleTypeName(
