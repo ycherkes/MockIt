@@ -136,6 +136,26 @@ namespace MockIt
             return node;
         }
 
+        public static SemanticModel GetModelFromNode(this SyntaxNode node, Compilation sutCompilation)
+        {
+            return node.SyntaxTree.GetModelFromSyntaxTree(sutCompilation);
+
+        }
+
+        public static SemanticModel GetModelFromSyntaxTree(this SyntaxTree tree, Compilation sutCompilation)
+        {
+            var compilation = sutCompilation.ContainsSyntaxTree(tree)
+                                ? sutCompilation
+                                : sutCompilation.ExternalReferences
+                                                 .OfType<CompilationReference>()
+                                                 .Select(x => x.Compilation).FirstOrDefault(c => c.ContainsSyntaxTree(tree));
+
+            var model = compilation?.GetSemanticModel(tree);
+
+            return model;
+
+        }
+
         public static SemanticModel GetSutSemanticModel(SemanticModel testSemanticModel, ISymbol suitableSutSymbol, Location sutFirstLocation)
         {
             var compilation = testSemanticModel.GetCompilation(suitableSutSymbol);

@@ -83,6 +83,20 @@ namespace MockIt
                                                         }).First();
 
 
+            var invokedMethodsOfMocks = GetInvokedMethodsOfMock(memberAccessExpresion, testSemanticModel, suts);
+
+            if (invokedMethodsOfMocks.Length == 0)
+                return document;
+
+            var editor = await DocumentEditor.CreateAsync(document, cancellationToken).ConfigureAwait(false);
+
+            ChangesMaker.ApplyChanges(invokationSyntax, editor, invokedMethodsOfMocks);
+
+            return editor.GetChangedDocument();
+        }
+
+        private static Fields[] GetInvokedMethodsOfMock(ExpressionSyntax memberAccessExpresion, SemanticModel testSemanticModel, IEnumerable<SutInfo> suts)
+        {
             var isLeftSideOfAssignExpression = memberAccessExpresion.IsLeftSideOfAssignExpression();
             var symbol = testSemanticModel.GetSymbolInfo(memberAccessExpresion).Symbol;
 
@@ -90,7 +104,7 @@ namespace MockIt
 
             var suitableSut = refType.GetSuitableSut(suts);
 
-            if (suitableSut == null) return document;
+            if (suitableSut == null) return new Fields[0];
 
             var sutSubstitutions = TestSemanticHelper.GetSubstitutions(refType);
 
@@ -99,7 +113,7 @@ namespace MockIt
             var sutSemanticModel = TestSemanticHelper.GetSutSemanticModel(testSemanticModel, suitableSutSymbol, sutFirstLocation);
 
             if (sutSemanticModel == null)
-                return document;
+                return new Fields[0];
 
             var node = sutFirstLocation.GetMemberNode();
 
@@ -114,48 +128,42 @@ namespace MockIt
                 count = allSyntax.Count;
 
                 var methods = TestSemanticHelper.GetMethodsToConfigureMocks(allNodes);
-                var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(allNodes, methods, isLeftSideOfAssignExpression);
+                var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(allNodes, methods,
+                    isLeftSideOfAssignExpression);
 
                 allSyntax.AddRange(methods.Concat(properties).Distinct());
                 allSyntax = allSyntax.Distinct().ToList();
 
-                allNodes = allSyntax.SelectMany(syn  => syn.DescendantNodesAndSelf())
-                                    .SelectMany(x => GetReferencedNodes(x, sutSemanticModel))
-                                    .ToList();
+                allNodes = allSyntax.SelectMany(syn => syn.DescendantNodesAndSelf())
+                    .SelectMany(x => GetReferencedNodes(x, sutSemanticModel))
+                    .ToList();
             }
 
-            var invokedMethodsOfMocks = GetInvokedMethodsOfMocks(allSyntax, 
-                                                                 sutSemanticModel, 
-                                                                 suitableSut, 
-                                                                 testSemanticModel, 
-                                                                 sutSubstitutions);
+            var invokedMethodsOfMocks = GetInvokedMethodsOfMocks(allSyntax,
+                sutSemanticModel,
+                suitableSut,
+                testSemanticModel,
+                sutSubstitutions);
 
-            var editor = await DocumentEditor.CreateAsync(document, cancellationToken).ConfigureAwait(false);
-
-            ChangesMaker.ApplyChanges(invokationSyntax, editor, invokedMethodsOfMocks);
-
-            return editor.GetChangedDocument();
+            return invokedMethodsOfMocks;
         }
 
         private static IEnumerable<SyntaxNode> GetReferencedNodes(SyntaxNode node, SemanticModel model)
         {
-            try
-            {
-                var symbol = model.GetSymbolInfo(node).Symbol;
+            var symbolModel = node.GetModelFromNode(model.Compilation);
+
+            if (symbolModel == null)
+                return new SyntaxNode[0];
+
+            var symbol = symbolModel.GetSymbolInfo(node).Symbol;
 
 
-                if (symbol == null)
-                    return Enumerable.Empty<SyntaxNode>();
+            if (symbol == null)
+                return new SyntaxNode[0];
 
-                return symbol.DeclaringSyntaxReferences
-                    .SelectMany(z => z.GetSyntax()
-                        .DescendantNodes());
-            }
-            //todo: determine the semantic model correctly
-            catch
-            {
-                return Enumerable.Empty<SyntaxNode>();
-            }
+            return symbol.DeclaringSyntaxReferences
+                         .SelectMany(z => z.GetSyntax()
+                                           .DescendantNodes());
         }
 
         private static Fields[] GetInvokedMethodsOfMocks(
@@ -167,7 +175,7 @@ namespace MockIt
         {
             var invokedMethodsOfMocks = methodsAndPropertyInvokations.Select(x => new
                                                                              {
-                                                                                 model.GetSymbolInfo(x).Symbol,
+                                                                                 x.SyntaxTree.GetModelFromSyntaxTree(model.Compilation)?.GetSymbolInfo(x).Symbol,
                                                                                  Expression = x
                                                                              })
                                                                      .Select(x => new Fields
