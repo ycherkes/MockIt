@@ -175,7 +175,7 @@ namespace MockIt
         {
             var invokedMethodsOfMocks = methodsAndPropertyInvokations.Select(x => new
                                                                              {
-                                                                                 x.SyntaxTree.GetModelFromSyntaxTree(model.Compilation)?.GetSymbolInfo(x).Symbol,
+                                                                                 x.GetModelFromExpression(model)?.GetSymbolInfo(x).Symbol,
                                                                                  Expression = x
                                                                              })
                                                                      .Select(x => new Fields

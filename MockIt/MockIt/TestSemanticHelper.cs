@@ -283,5 +283,10 @@ namespace MockIt
 
             return typeMap;
         }
+
+        public static SemanticModel GetModelFromExpression(this ExpressionSyntax x, SemanticModel dependantModel)
+        {
+            return x.SyntaxTree.GetModelFromSyntaxTree(dependantModel.Compilation);
+        }
     }
 }
