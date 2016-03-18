@@ -232,7 +232,8 @@ namespace MockIt
 
         private static Dictionary<string, ITypeSymbol> GetSubstitutions(SemanticModel semanticModel, ExpressionSyntax y)
         {
-            var symbol = semanticModel.GetSymbolInfo(y).Symbol;
+            var model = y.GetModelFromExpression(semanticModel);
+            var symbol = model.GetSymbolInfo(y).Symbol;
             return TestSemanticHelper.GetSubstitutions(symbol);
         }
     }
