@@ -33,6 +33,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="ChangesMaker.cs" />
+    <Compile Include="ConstructorInjections.cs" />
+    <Compile Include="ConstructorParameters.cs" />
     <Compile Include="EnumerableExtensions.cs" />
     <Compile Include="Fields.cs" />
     <Compile Include="FieldsSetups.cs" />

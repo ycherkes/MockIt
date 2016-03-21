@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -8,7 +10,7 @@ using static System.String;
 
 namespace MockIt
 {
-    public class ChangesMaker
+    public static class ChangesMaker
     {
         private static IEnumerable<ExpressionStatementSyntax> MakeVerifiers(IEnumerable<Fields> invokedMethodsOfMocks)
         {
@@ -155,6 +157,74 @@ namespace MockIt
             
             //todo will try to understand how to add a new line before
             editor.InsertAfter(invokationSyntax, verifiers.Select(x => x.WithLeadingTrivia(SyntaxFactory.ElasticMarker)));
+        }
+
+        public static ConstructorInjections[] MakeConstructorInjections(this IEnumerable<ConstructorParameters> constructorParameters)
+        {
+            var changes = constructorParameters.Select(x => new ConstructorInjections
+            {
+                NewField = SyntaxFactory.FieldDeclaration(
+                    SyntaxFactory.VariableDeclaration(
+                        SyntaxFactory.GenericName(
+                            SyntaxFactory.Identifier("Mock"))
+                            .WithTypeArgumentList(
+                                SyntaxFactory.TypeArgumentList(
+                                    SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
+                                        SyntaxFactory.IdentifierName(x.TypeName)))))
+                        .WithVariables(
+                            SyntaxFactory.SingletonSeparatedList(
+                                SyntaxFactory.VariableDeclarator(
+                                    SyntaxFactory.Identifier(x.ArgumentName + "Mock")))))
+                    .WithModifiers(
+                        SyntaxFactory.TokenList(
+                            SyntaxFactory.Token(SyntaxKind.PrivateKeyword))),
+                NewExpression = SyntaxFactory.ExpressionStatement(
+                    SyntaxFactory.AssignmentExpression(
+                        SyntaxKind.SimpleAssignmentExpression,
+                        SyntaxFactory.IdentifierName(x.ArgumentName + "Mock"),
+                        SyntaxFactory.ObjectCreationExpression(
+                            SyntaxFactory.GenericName(
+                                SyntaxFactory.Identifier("Mock"))
+                                .WithTypeArgumentList(
+                                    SyntaxFactory.TypeArgumentList(
+                                        SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
+                                            SyntaxFactory.IdentifierName(x.TypeName)))))
+                            .WithArgumentList(SyntaxFactory.ArgumentList()))),
+                CreationArgument = (SyntaxNodeOrToken) SyntaxFactory.Argument(
+                    SyntaxFactory.MemberAccessExpression(
+                        SyntaxKind.SimpleMemberAccessExpression,
+                        SyntaxFactory.IdentifierName(x.ArgumentName + "Mock"),
+                        SyntaxFactory.IdentifierName(@"Object")))
+            }).ToArray();
+            return changes;
+        }
+
+        public static async Task<Document> ApplyConstuctorInjections(Document document, 
+            SyntaxNode creation, 
+            CancellationToken cancellationToken,
+            IReadOnlyCollection<ConstructorInjections> changes,
+            ObjectCreationExpressionSyntax creationExpressionSyntax)
+        {
+            var arguments = (from change in changes
+                from comma in new[] {(SyntaxNodeOrToken) SyntaxFactory.Token(SyntaxKind.CommaToken)}
+                select new {change.CreationArgument, comma})
+                .SelectMany(x => new[] {x.CreationArgument, x.comma})
+                .Take(changes.Count*2 - 1);
+
+            var editor = await DocumentEditor.CreateAsync(document, cancellationToken).ConfigureAwait(false);
+
+            editor.InsertBefore(creation.Parent.Parent, changes.Select(x => x.NewField));
+            editor.InsertBefore(creation,
+                changes.Select(
+                    (x, i) =>
+                        changes.Count - 1 == i
+                            ? x.NewExpression.WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed,
+                                SyntaxFactory.CarriageReturnLineFeed))
+                            : x.NewExpression));
+            editor.ReplaceNode(creationExpressionSyntax.ArgumentList,
+                SyntaxFactory.ArgumentList(SyntaxFactory.SeparatedList<ArgumentSyntax>(arguments)));
+           
+            return editor.GetChangedDocument();
         }
     }
 }
