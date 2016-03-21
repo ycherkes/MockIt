@@ -51,6 +51,10 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="TestSemanticHelper.cs" />
+    <Compile Include="ThirdParty\SampleData.cs" />
+    <Compile Include="ThirdParty\SampleIterating.cs" />
+    <Compile Include="ThirdParty\SampleSearching.cs" />
+    <Compile Include="ThirdParty\TreeNode.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources.resx">

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -6,6 +7,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
+using MockIt.ThirdParty;
 using static System.String;
 
 namespace MockIt
@@ -190,13 +192,109 @@ namespace MockIt
                                         SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
                                             SyntaxFactory.IdentifierName(x.TypeName)))))
                             .WithArgumentList(SyntaxFactory.ArgumentList()))),
-                CreationArgument = (SyntaxNodeOrToken) SyntaxFactory.Argument(
+                CreationArgument = SyntaxFactory.Argument(
                     SyntaxFactory.MemberAccessExpression(
                         SyntaxKind.SimpleMemberAccessExpression,
                         SyntaxFactory.IdentifierName(x.ArgumentName + "Mock"),
                         SyntaxFactory.IdentifierName(@"Object")))
             }).ToArray();
             return changes;
+        }
+
+        public static IEnumerable<DependencyField> MakeChainOfCallsInjections(IReadOnlyCollection<MemberDeclarationSyntax> implicitDependencies, TreeNode<DependencyField> parentFieldSyntax)
+        {
+            var changes = implicitDependencies.Select(x => new DependencyField
+            {
+                Field = SyntaxFactory.FieldDeclaration(
+                    SyntaxFactory.VariableDeclaration(
+                        SyntaxFactory.GenericName(
+                            SyntaxFactory.Identifier("Mock"))
+                            .WithTypeArgumentList(
+                                SyntaxFactory.TypeArgumentList(
+                                    SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
+                                        SyntaxFactory.IdentifierName(GetIdentifierType(x) /*x.TypeName*/)))))
+                        .WithVariables(
+                            SyntaxFactory.SingletonSeparatedList(
+                                SyntaxFactory.VariableDeclarator(
+                                    SyntaxFactory.Identifier(/*x.ArgumentName*/ GetIdentifierName(x, parentFieldSyntax) + "Mock")))))
+                    .WithModifiers(
+                        SyntaxFactory.TokenList(
+                            SyntaxFactory.Token(SyntaxKind.PrivateKeyword))),
+                NewExpression = SyntaxFactory.ExpressionStatement(
+                    SyntaxFactory.AssignmentExpression(
+                        SyntaxKind.SimpleAssignmentExpression,
+                        SyntaxFactory.IdentifierName(GetIdentifierName(x, parentFieldSyntax) + "Mock"),
+                        SyntaxFactory.ObjectCreationExpression(
+                            SyntaxFactory.GenericName(
+                                SyntaxFactory.Identifier("Mock"))
+                                .WithTypeArgumentList(
+                                    SyntaxFactory.TypeArgumentList(
+                                        SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
+                                            SyntaxFactory.IdentifierName(GetIdentifierType(x))))))
+                            .WithArgumentList(SyntaxFactory.ArgumentList()))),
+                SetupExpression = null
+                //CreationArgument = SyntaxFactory.Argument(
+                //    SyntaxFactory.MemberAccessExpression(
+                //        SyntaxKind.SimpleMemberAccessExpression,
+                //        SyntaxFactory.IdentifierName(x.ArgumentName + "Mock"),
+                //        SyntaxFactory.IdentifierName(@"Object")))
+            }).ToArray();
+            return changes;
+
+            throw new NotImplementedException();
+        }
+
+        //todo: make the type Name
+        private static string GetIdentifierType(MemberDeclarationSyntax memberDeclarationSyntax)
+        {
+            return "Make_the_type";
+        }
+
+        private static string GetIdentifierName(MemberDeclarationSyntax memberDeclarationSyntax, TreeNode<DependencyField> parentFieldSyntax)
+        {
+            var leafName = GetLeafIdentifierName(memberDeclarationSyntax);
+
+            //throw new NotSupportedException();
+
+            var parentNode = parentFieldSyntax;
+            leafName = GetLeafIdentifierName(parentFieldSyntax.Data.Field) + "_" + leafName;
+
+            while (!parentNode.IsRoot)
+            {
+                leafName = GetLeafIdentifierName(parentFieldSyntax.Data.Field) + "_" + leafName;
+                parentNode = parentNode.Parent;
+            }
+
+            return leafName;
+        }
+
+        private static string GetLeafIdentifierName(MemberDeclarationSyntax memberDeclarationSyntax)
+        {
+            var propertyDeclarationSyntax = memberDeclarationSyntax as PropertyDeclarationSyntax;
+            if (propertyDeclarationSyntax != null)
+            {
+                {
+                    return propertyDeclarationSyntax.Identifier.Text;
+                }
+            }
+
+            var methodDeclarationSyntax = memberDeclarationSyntax as MethodDeclarationSyntax;
+            if (methodDeclarationSyntax != null)
+            {
+                {
+                    return methodDeclarationSyntax.Identifier.Text;
+                }
+            }
+
+            var fieldDeclarationSyntax = memberDeclarationSyntax as FieldDeclarationSyntax;
+            if (fieldDeclarationSyntax != null)
+            {
+                {
+                    return fieldDeclarationSyntax.Declaration.Variables.First().Identifier.Text;
+                }
+            }
+
+            throw new NotSupportedException();
         }
 
         public static async Task<Document> ApplyConstuctorInjections(Document document, 

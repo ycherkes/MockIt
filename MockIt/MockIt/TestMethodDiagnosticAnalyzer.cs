@@ -24,6 +24,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using MockIt.ThirdParty;
 
 namespace MockIt
 {
@@ -136,9 +137,9 @@ namespace MockIt
 
         private static IReadOnlyCollection<string> GetFieldsToSetup(SemanticModel semanticModel, IEnumerable<IMethodSymbol> methodSymbols, SutInfo suitableSut)
         {
-            return methodSymbols.SelectMany(x =>  suitableSut.DeclaredFields
+            return methodSymbols.SelectMany(x =>  suitableSut.InjectedFields
                                                              .Where(IsCorrespondingField(semanticModel, x))
-                                                             .SelectMany(z => z.Declaration.Variables.Select(f => f.Identifier.ValueText))
+                                                             .SelectMany(z => z.Data.Field.Declaration.Variables.Select(f => f.Identifier.ValueText))
                                                              .ToArray())
                                 .ToArray();
         }
@@ -153,9 +154,9 @@ namespace MockIt
                                   .Any(x => mocksInvokations.Any(e => x.StartsWith(e + ".Setup"))) == true;
         }
 
-        private static Func<FieldDeclarationSyntax, bool> IsCorrespondingField(SemanticModel semanticModel, IMethodSymbol x)
+        private static Func<TreeNode<DependencyField>, bool> IsCorrespondingField(SemanticModel semanticModel, IMethodSymbol x)
         {
-            return z => (z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
+            return z => (z.Data.Field.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
                                                                   .Arguments
                                                                   .Any(y => semanticModel.GetSymbolInfo(y).Symbol.ToString() == x.ReceiverType.ToString() 
                                                                             || (semanticModel.GetSymbolInfo(y).Symbol as INamedTypeSymbol)?.ConstructedFrom.ToString() == x.ReceiverType.ToString()) 

@@ -9,4 +9,11 @@ namespace MockIt
         public ExpressionStatementSyntax NewExpression { get; set; }
         public SyntaxNodeOrToken CreationArgument { get; set; }
     }
+
+    public class ChainOfCallsInjections
+    {
+        public FieldDeclarationSyntax NewField { get; set; }
+        public ExpressionStatementSyntax NewExpression { get; set; }
+        public ExpressionStatementSyntax SetupExpression { get; set; }
+    }
 }

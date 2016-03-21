@@ -71,7 +71,7 @@ namespace MockIt
             var suts = testInitMethodDecl.GetSuts(testSemanticModel, declaredFields);
 
             //todo handle the case when: _sut.List().Result instead of _sut.List()
-            var memberAccessExpression = invokationSyntax.DescendantNodes()
+            var memberAccessExpressions = invokationSyntax.DescendantNodes()
                 .OfType<ExpressionSyntax>()
                 .Where(x => x is InvocationExpressionSyntax || x is MemberAccessExpressionSyntax)
                 .Select(expr =>
@@ -83,7 +83,7 @@ namespace MockIt
                 });//.First();
 
 
-            var invokedMethodsOfMocks = memberAccessExpression.SelectMany(expressionSyntax => GetInvokedMethodsOfMock(expressionSyntax, testSemanticModel, suts))
+            var invokedMethodsOfMocks = memberAccessExpressions.SelectMany(expressionSyntax => GetInvokedMethodsOfMock(expressionSyntax, testSemanticModel, suts))
                                                               .DistinctBy(x => x.MethodOrPropertySymbol)
                                                               .ToArray();
 
@@ -196,12 +196,12 @@ namespace MockIt
                                                                   ISymbol symbol, 
                                                                   Dictionary<string, ITypeSymbol> sutSubstitutions)
         {
-            return suitableSut.DeclaredFields.Where(
-                z => (z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList.Arguments.Any(y => IsCorrespondingType(semanticModel, y, symbol, sutSubstitutions)) ?? false)
+            return suitableSut.InjectedFields.Where(
+                z => (z.Data.Field.Declaration.Type as GenericNameSyntax)?.TypeArgumentList.Arguments.Any(y => IsCorrespondingType(semanticModel, y, symbol, sutSubstitutions)) ?? false)
                 .Select(z => new FieldsSetups
                 {
-                    Field = z.Declaration.Variables.Select(f => f.Identifier.ValueText),
-                    Substitutions = (z.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
+                    Field = z.Data.Field.Declaration.Variables.Select(f => f.Identifier.ValueText),
+                    Substitutions = (z.Data.Field.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
                                                                               .Arguments
                                                                               .Select(y => GetSubstitutions(semanticModel, y))
                                                                               .SelectMany(s => s)
