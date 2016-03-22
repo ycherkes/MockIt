@@ -137,8 +137,7 @@ namespace MockIt
 
         private static IReadOnlyCollection<string> GetFieldsToSetup(SemanticModel semanticModel, IEnumerable<IMethodSymbol> methodSymbols, SutInfo suitableSut)
         {
-            return methodSymbols.SelectMany(x =>  suitableSut.InjectedFields
-                                                             .Where(IsCorrespondingField(semanticModel, x))
+            return methodSymbols.SelectMany(x =>  suitableSut.InjectedFields.Find(IsCorrespondingField(semanticModel, x))
                                                              .SelectMany(z => z.Data.Field.Declaration.Variables.Select(f => f.Identifier.ValueText))
                                                              .ToArray())
                                 .ToArray();
@@ -156,11 +155,20 @@ namespace MockIt
 
         private static Func<TreeNode<DependencyField>, bool> IsCorrespondingField(SemanticModel semanticModel, IMethodSymbol x)
         {
-            return z => (z.Data.Field.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
+            return z => z.Data.IsAlreadyDeclared ? (z.Data.Field.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
                                                                   .Arguments
-                                                                  .Any(y => semanticModel.GetSymbolInfo(y).Symbol.ToString() == x.ReceiverType.ToString() 
-                                                                            || (semanticModel.GetSymbolInfo(y).Symbol as INamedTypeSymbol)?.ConstructedFrom.ToString() == x.ReceiverType.ToString()) 
-                    ?? false;
+                                                                  .Any(a => IsCorrespondingType(semanticModel, x, a)) ?? false
+                                                 : IsCorrespondingType(semanticModel, x, z.Data.FieldTypeSyntax);
+        }
+
+        private static bool IsCorrespondingType(SemanticModel semanticModel, IMethodSymbol x, TypeSyntax typeSyntax)
+        {
+            var fieldTree = typeSyntax.SyntaxTree;
+            var fieldSemanticModel = fieldTree.GetModelFromSyntaxTree(semanticModel.Compilation);
+            var symbolInfo = fieldSemanticModel.GetSymbolInfo(typeSyntax);
+
+            return symbolInfo.Symbol.ToString() == x.ReceiverType.ToString() 
+                        || (symbolInfo.Symbol as INamedTypeSymbol)?.ConstructedFrom.ToString() == x.ReceiverType.ToString();
         }
     }
 }

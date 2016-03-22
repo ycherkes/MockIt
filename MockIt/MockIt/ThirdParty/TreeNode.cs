@@ -65,11 +65,16 @@ namespace MockIt.ThirdParty
             return ElementsIndex.FirstOrDefault(predicate);
         }
 
+        public IEnumerable<TreeNode<T>> FindTreeNodes(Func<TreeNode<T>, bool> predicate)
+        {
+            return ElementsIndex.Where(predicate);
+        }
+
         #endregion
 
 
         #region iterating
-        
+
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();

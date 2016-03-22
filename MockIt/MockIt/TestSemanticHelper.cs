@@ -96,7 +96,7 @@ namespace MockIt
             return methods;
         }
 
-        public static string GetSimpleTypeName(ISymbol type)
+        public static string GetSimpleTypeName(this ISymbol type)
         {
             return type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
         }
@@ -209,14 +209,16 @@ namespace MockIt
 
         private static void FillTree(TreeNode<DependencyField> parentFieldSyntax, SemanticModel semanticModel)
         {
-            var fieldType = ((GenericNameSyntax)parentFieldSyntax.Data.Field.Declaration.Type).TypeArgumentList.Arguments.First();
+            var fieldType = parentFieldSyntax.Data.IsAlreadyDeclared 
+                                ? ((GenericNameSyntax) parentFieldSyntax.Data.Field.Declaration.Type).TypeArgumentList.Arguments.First() 
+                                : parentFieldSyntax.Data.FieldTypeSyntax;
 
-            //var fieldTree = fieldType.SyntaxTree;
-            //var  fieldSemanticModel = GetModelFromSyntaxTree(fieldTree, semanticModel.Compilation);
-            var symbolInfo = semanticModel.GetSymbolInfo(fieldType);
-            //var fieldSemanticModel = GetModelFromSyntaxTree(symbolInfo.Symbol.DeclaringSyntaxReferences, semanticModel.Compilation);
+            var fieldTree = fieldType.SyntaxTree;
+            var fieldSemanticModel = GetModelFromSyntaxTree(fieldTree, semanticModel.Compilation);
+            var symbolInfo = fieldSemanticModel.GetSymbolInfo(fieldType);
+                //var fieldSemanticModel = GetModelFromSyntaxTree(symbolInfo.Symbol.DeclaringSyntaxReferences, semanticModel.Compilation);
 
-            var symbol = symbolInfo.Symbol as INamedTypeSymbol;
+            var  symbol = symbolInfo.Symbol as INamedTypeSymbol;
 
             if (!(symbol?.IsAbstract ?? false))
                 return;
@@ -236,12 +238,11 @@ namespace MockIt
             var implicitDependencies = fieldTypeMembers.Distinct()
                                                        .ToList();
 
-            var dependencies = ChangesMaker.MakeChainOfCallsInjections(implicitDependencies, parentFieldSyntax);
+            var dependencies = ChangesMaker.MakeChainOfCallsInjections(implicitDependencies, parentFieldSyntax, semanticModel);
 
             foreach (var dependency in dependencies)
             {
-                var nodeFromDependency = new TreeNode<DependencyField>(dependency);
-                parentFieldSyntax.Children.Add(nodeFromDependency);
+                var nodeFromDependency = parentFieldSyntax.AddChild(dependency);
                 FillTree(nodeFromDependency, semanticModel);
             }
         }

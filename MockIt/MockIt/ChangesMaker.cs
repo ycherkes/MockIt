@@ -201,18 +201,18 @@ namespace MockIt
             return changes;
         }
 
-        public static IEnumerable<DependencyField> MakeChainOfCallsInjections(IReadOnlyCollection<MemberDeclarationSyntax> implicitDependencies, TreeNode<DependencyField> parentFieldSyntax)
+        public static IEnumerable<DependencyField> MakeChainOfCallsInjections(IReadOnlyCollection<MemberDeclarationSyntax> implicitDependencies, TreeNode<DependencyField> parentFieldSyntax, SemanticModel semanticModel)
         {
             var changes = implicitDependencies.Select(x => new DependencyField
             {
+                FieldTypeSyntax = GetLeafTypeSyntax(x),
                 Field = SyntaxFactory.FieldDeclaration(
                     SyntaxFactory.VariableDeclaration(
                         SyntaxFactory.GenericName(
                             SyntaxFactory.Identifier("Mock"))
                             .WithTypeArgumentList(
                                 SyntaxFactory.TypeArgumentList(
-                                    SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
-                                        SyntaxFactory.IdentifierName(GetIdentifierType(x) /*x.TypeName*/)))))
+                                    SyntaxFactory.SingletonSeparatedList(GetLeafTypeSyntax(x)))))
                         .WithVariables(
                             SyntaxFactory.SingletonSeparatedList(
                                 SyntaxFactory.VariableDeclarator(
@@ -229,25 +229,49 @@ namespace MockIt
                                 SyntaxFactory.Identifier("Mock"))
                                 .WithTypeArgumentList(
                                     SyntaxFactory.TypeArgumentList(
-                                        SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
-                                            SyntaxFactory.IdentifierName(GetIdentifierType(x))))))
+                                        SyntaxFactory.SingletonSeparatedList(GetLeafTypeSyntax(x)))))
                             .WithArgumentList(SyntaxFactory.ArgumentList()))),
                 SetupExpression = null
-                //CreationArgument = SyntaxFactory.Argument(
-                //    SyntaxFactory.MemberAccessExpression(
-                //        SyntaxKind.SimpleMemberAccessExpression,
-                //        SyntaxFactory.IdentifierName(x.ArgumentName + "Mock"),
-                //        SyntaxFactory.IdentifierName(@"Object")))
             }).ToArray();
             return changes;
-
-            throw new NotImplementedException();
         }
 
-        //todo: make the type Name
-        private static string GetIdentifierType(MemberDeclarationSyntax memberDeclarationSyntax)
+        private static ITypeSymbol GetIdentifierType(MemberDeclarationSyntax memberDeclarationSyntax, SemanticModel semanticModel)
         {
-            return "Make_the_type";
+            var memberModel = memberDeclarationSyntax.GetModelFromNode(semanticModel.Compilation);
+            var typeSyntax = GetLeafTypeSyntax(memberDeclarationSyntax);
+            var symbolInfo = memberModel.GetSymbolInfo(typeSyntax);
+            
+            return symbolInfo.Symbol as ITypeSymbol;
+        }
+
+        private static TypeSyntax GetLeafTypeSyntax(MemberDeclarationSyntax memberDeclarationSyntax)
+        {
+            var propertyDeclarationSyntax = memberDeclarationSyntax as PropertyDeclarationSyntax;
+            if (propertyDeclarationSyntax != null)
+            {
+                {
+                    return propertyDeclarationSyntax.Type;
+                }
+            }
+
+            var methodDeclarationSyntax = memberDeclarationSyntax as MethodDeclarationSyntax;
+            if (methodDeclarationSyntax != null)
+            {
+                {
+                    return methodDeclarationSyntax.ReturnType;
+                }
+            }
+
+            var fieldDeclarationSyntax = memberDeclarationSyntax as FieldDeclarationSyntax;
+            if (fieldDeclarationSyntax != null)
+            {
+                {
+                    return fieldDeclarationSyntax.Declaration.Type;
+                }
+            }
+
+            throw new NotSupportedException();
         }
 
         private static string GetIdentifierName(MemberDeclarationSyntax memberDeclarationSyntax, TreeNode<DependencyField> parentFieldSyntax)

@@ -18,6 +18,7 @@ namespace MockIt
     public class DependencyField
     {
         public FieldDeclarationSyntax Field { get; set; }
+        public TypeSyntax FieldTypeSyntax { get; set; }
         public bool IsAlreadyDeclared { get; set; }
         public ExpressionStatementSyntax NewExpression { get; set; }
         public string SetupExpression { get; set; }
