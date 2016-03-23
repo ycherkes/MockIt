@@ -70,6 +70,11 @@ namespace MockIt.ThirdParty
             return ElementsIndex.Where(predicate);
         }
 
+        public IEnumerable<TreeNode<T>> FindChildTreeNodes(Func<TreeNode<T>, bool> predicate)
+        {
+            return ElementsIndex.Where(x => x != this).Where(predicate);
+        }
+
         #endregion
 
 

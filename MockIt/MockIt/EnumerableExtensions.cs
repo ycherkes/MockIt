@@ -20,5 +20,14 @@ namespace MockIt
 
             return result.ToArray();
         }
+
+        public static IEnumerable<TreeNode<T>> FindChild<T>(this IEnumerable<TreeNode<T>> items, Func<TreeNode<T>, bool> predicate)
+        {
+            var result = Enumerable.Empty<TreeNode<T>>();
+
+            result = items.Aggregate(result, (current, item) => current.Concat(item.FindChildTreeNodes(predicate)));
+
+            return result.ToArray();
+        }
     }
 }

@@ -67,7 +67,7 @@ namespace MockIt
 
             if (testInitMethodDecl == null) return;
 
-            var declaredFields = testInitMethodDecl.Parent.ChildNodes().OfType<FieldDeclarationSyntax>();
+            var declaredFields = testInitMethodDecl.Parent.ChildNodes().OfType<FieldDeclarationSyntax>().ToArray();
 
             var suts = testInitMethodDecl.GetSuts(testSemanticModel, declaredFields);
 
@@ -155,20 +155,26 @@ namespace MockIt
 
         private static Func<TreeNode<DependencyField>, bool> IsCorrespondingField(SemanticModel semanticModel, IMethodSymbol x)
         {
-            return z => z.Data.IsAlreadyDeclared ? (z.Data.Field.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
+            return z => (z.Data.Field.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
                                                                   .Arguments
-                                                                  .Any(a => IsCorrespondingType(semanticModel, x, a)) ?? false
-                                                 : IsCorrespondingType(semanticModel, x, z.Data.FieldTypeSyntax);
+                                                                  .Any(a => IsCorrespondingType(semanticModel, x, a, z)) ?? false;
         }
 
-        private static bool IsCorrespondingType(SemanticModel semanticModel, IMethodSymbol x, TypeSyntax typeSyntax)
+        //todo: replace corresponding by type to corresponding by chain of calls
+        private static bool IsCorrespondingType(SemanticModel semanticModel, IMethodSymbol x, TypeSyntax typeSyntax, TreeNode<DependencyField> field)
         {
             var fieldTree = typeSyntax.SyntaxTree;
             var fieldSemanticModel = fieldTree.GetModelFromSyntaxTree(semanticModel.Compilation);
             var symbolInfo = fieldSemanticModel.GetSymbolInfo(typeSyntax);
 
-            return symbolInfo.Symbol.ToString() == x.ReceiverType.ToString() 
-                        || (symbolInfo.Symbol as INamedTypeSymbol)?.ConstructedFrom.ToString() == x.ReceiverType.ToString();
+            return (symbolInfo.Symbol.ToString() == x.ReceiverType.ToString() 
+                        || (symbolInfo.Symbol as INamedTypeSymbol)?.ConstructedFrom.ToString() == x.ReceiverType.ToString()
+                        || (symbolInfo.Symbol as INamedTypeSymbol)?.ConstructedFrom.ToString() == (x.ReceiverType as INamedTypeSymbol)?.ConstructedFrom.ToString()) 
+                        && !field.FindChildTreeNodes(y => IsCorrespondingField(semanticModel, x)(y)).Any()
+                        ||
+                   (symbolInfo.Symbol.ToString() == x.ReturnType.ToString()
+                        || (symbolInfo.Symbol as INamedTypeSymbol)?.ConstructedFrom.ToString() == x.ReturnType.ToString()
+                        || (symbolInfo.Symbol as INamedTypeSymbol)?.ConstructedFrom.ToString() == (x.ReturnType as INamedTypeSymbol)?.ConstructedFrom.ToString());
         }
     }
 }

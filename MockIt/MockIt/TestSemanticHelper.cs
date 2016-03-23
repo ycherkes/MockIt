@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -8,6 +9,14 @@ using MockIt.ThirdParty;
 
 namespace MockIt
 {
+    public class SetupsInfo
+    {
+        public ExpressionStatementSyntax Expression { get; set; }
+        public FieldDeclarationSyntax ReturnsField { get; set; }
+        public FieldDeclarationSyntax ParentField { get; set; }
+        public MemberAccessExpressionSyntax SetupIdentifierNode { get; set; }
+    }
+
     public static class TestSemanticHelper
     {
         public static MethodDeclarationSyntax GetTestInitializeMethod(SemanticModel semanticModel)
@@ -169,7 +178,7 @@ namespace MockIt
 
         //todo .. and implicit fields also
         public static IReadOnlyCollection<SutInfo> GetSuts(this SyntaxNode testInitMethodDecl, SemanticModel semanticModel,
-            IEnumerable<FieldDeclarationSyntax> declaredFields, bool fillImplicitDependencies = false)
+            IReadOnlyCollection<FieldDeclarationSyntax> declaredFields, bool fillImplicitDependencies = true)
         {
             var suts = testInitMethodDecl.DescendantNodes()
                 .OfType<ObjectCreationExpressionSyntax>()
@@ -182,7 +191,7 @@ namespace MockIt
                                                     .Select(y => new DependencyField
                                                     {
                                                         Field = y,
-                                                        IsAlreadyDeclared = true
+                                                        IsInjectedFromConstructor = true
                                                     })
                                                     .Select(y => new TreeNode<DependencyField>(y))
                                                    .ToArray()
@@ -192,59 +201,95 @@ namespace MockIt
 
             if (!fillImplicitDependencies) return suts;
 
+            var implicitDependencies = GetTestInitSetups(testInitMethodDecl, declaredFields);
+
             foreach (var sutInfo in suts)
             {
                 foreach (var field in sutInfo.InjectedFields)
-                {
-                    
+                {   
 
-                    FillTree(field, semanticModel);
+                    FillSetupsTree(field, implicitDependencies, testInitMethodDecl, semanticModel);
                 }
-
-                //sutInfo.ImplicitDependencies = implicitDependencies;
             }
 
             return suts;
         }
 
-        private static void FillTree(TreeNode<DependencyField> parentFieldSyntax, SemanticModel semanticModel)
+        private static IReadOnlyCollection<SetupsInfo> GetTestInitSetups(SyntaxNode testInitMethodDecl, IReadOnlyCollection<FieldDeclarationSyntax> declaredFields)
         {
-            var fieldType = parentFieldSyntax.Data.IsAlreadyDeclared 
-                                ? ((GenericNameSyntax) parentFieldSyntax.Data.Field.Declaration.Type).TypeArgumentList.Arguments.First() 
-                                : parentFieldSyntax.Data.FieldTypeSyntax;
+            var result =  testInitMethodDecl.DescendantNodes()
+                .OfType<ExpressionStatementSyntax>()
+                .Select(x => new
+                {
+                    Expression = x,
+                    Match = Regex.Match(x.ToString(), @"(.+)\.(Setup){1}(Get){0,1}\(\s*(?<varName>\w+)\s*=>\s*\k<varName>\.(\w.+)((\(.*\){1})|'')\)\s*.Returns\((.+)\.Object\)")
+                })
+                .Where(x => x.Match.Success)
+                .Select(x => new SetupsInfo
+                {
+                    Expression = x.Expression,
+                    ParentField = declaredFields.FirstOrDefault(y => y.Declaration.Variables.Any(z => z.Identifier.Text == x.Match.Groups[1].Value.Trim())),
+                    SetupIdentifierNode = x.Expression.DescendantNodes().OfType<MemberAccessExpressionSyntax>().FirstOrDefault(y => y.Name.ToString() == x.Match.Groups[4].Value.Trim()),
+                    ReturnsField = declaredFields.FirstOrDefault(y => y.Declaration.Variables.Any(z => z.Identifier.Text == x.Match.Groups[7].Value.Trim())),
+                })
+                .ToArray();
 
-            var fieldTree = fieldType.SyntaxTree;
-            var fieldSemanticModel = GetModelFromSyntaxTree(fieldTree, semanticModel.Compilation);
-            var symbolInfo = fieldSemanticModel.GetSymbolInfo(fieldType);
-                //var fieldSemanticModel = GetModelFromSyntaxTree(symbolInfo.Symbol.DeclaringSyntaxReferences, semanticModel.Compilation);
+            return result;
+        }
 
-            var  symbol = symbolInfo.Symbol as INamedTypeSymbol;
+        private static void FillSetupsTree(TreeNode<DependencyField> parentFieldSyntax, IReadOnlyCollection<SetupsInfo> setupsInfos, SyntaxNode testInitMethodDecl, SemanticModel semanticModel)
+        {
+            //var fieldType = parentFieldSyntax.Data.IsInjectedFromConstructor 
+            //                    ? ((GenericNameSyntax) parentFieldSyntax.Data.Field.Declaration.Type).TypeArgumentList.Arguments.First() 
+            //                    : parentFieldSyntax.Data.FieldTypeSyntax;
 
-            if (!(symbol?.IsAbstract ?? false))
-                return;
+            var fieldSetups = setupsInfos.Where(x => x.ParentField == parentFieldSyntax.Data.Field).Select(x => new DependencyField
+            {
+                Field = x.ReturnsField,
+                IsInjectedFromConstructor = false,
+                SetupExpression = x.Expression,
+                SetupIdentifierNode = x.SetupIdentifierNode
+            }).ToArray();
 
-            var fieldTypeMembers = symbol.DeclaringSyntaxReferences
-                .SelectMany(x => x.GetSyntax().DescendantNodes())
-                .Where(
-                    x =>
-                        symbol.TypeKind == TypeKind.Interface ||
-                        ((x as MethodDeclarationSyntax)?.Modifiers.Contains(
-                            SyntaxFactory.Token(SyntaxKind.PublicKeyword)) ?? false)
-                        ||
-                        ((x as PropertyDeclarationSyntax)?.Modifiers.Contains(
-                            SyntaxFactory.Token(SyntaxKind.PublicKeyword)) ?? false))
-                .OfType<MemberDeclarationSyntax>();
-
-            var implicitDependencies = fieldTypeMembers.Distinct()
-                                                       .ToList();
-
-            var dependencies = ChangesMaker.MakeChainOfCallsInjections(implicitDependencies, parentFieldSyntax, semanticModel);
-
-            foreach (var dependency in dependencies)
+            foreach (var dependency in fieldSetups)
             {
                 var nodeFromDependency = parentFieldSyntax.AddChild(dependency);
-                FillTree(nodeFromDependency, semanticModel);
+                FillSetupsTree(nodeFromDependency, setupsInfos, testInitMethodDecl, semanticModel);
             }
+
+            //var fieldType = ((GenericNameSyntax)parentFieldSyntax.Data.Field.Declaration.Type).TypeArgumentList.Arguments.First();
+
+            //var fieldTree = fieldType.SyntaxTree;
+            //var fieldSemanticModel = GetModelFromSyntaxTree(fieldTree, semanticModel.Compilation);
+            //var symbolInfo = fieldSemanticModel.GetSymbolInfo(fieldType);
+
+            //var  symbol = symbolInfo.Symbol as INamedTypeSymbol;
+
+            //if (!(symbol?.IsAbstract ?? false))
+            //    return;
+
+            //var fieldTypeMembers = symbol.DeclaringSyntaxReferences
+            //    .SelectMany(x => x.GetSyntax().DescendantNodes())
+            //    .Where(
+            //        x =>
+            //            symbol.TypeKind == TypeKind.Interface ||
+            //            ((x as MethodDeclarationSyntax)?.Modifiers.Contains(
+            //                SyntaxFactory.Token(SyntaxKind.PublicKeyword)) ?? false)
+            //            ||
+            //            ((x as PropertyDeclarationSyntax)?.Modifiers.Contains(
+            //                SyntaxFactory.Token(SyntaxKind.PublicKeyword)) ?? false))
+            //    .OfType<MemberDeclarationSyntax>();
+
+            //var implicitDependencies = fieldTypeMembers.Distinct()
+            //                                           .ToList();
+
+            //var dependencies = ChangesMaker.MakeChainOfCallsInjections(implicitDependencies, parentFieldSyntax, semanticModel);
+
+            //foreach (var dependency in dependencies)
+            //{
+            //    var nodeFromDependency = parentFieldSyntax.AddChild(dependency);
+            //    FillSetupsTree(nodeFromDependency, semanticModel, testInitMethodDecl, setupsInfos);
+            //}
         }
 
         public static SutInfo GetSuitableSut(this INamedTypeSymbol refType, IEnumerable<SutInfo> suts)
