@@ -8,30 +8,30 @@ namespace UnitTestProject1
     [TestClass]
     public class UnitTest1
     {
-        private Class1<List<string>, Dictionary<int, string>> sut;       
+        private Class1<List<string>, Dictionary<int, string>> _sut;       
 
         [TestInitialize]
         public void Init()
         {
-            sut = new Class1<List<string>, Dictionary<int, string>>();
+            _sut = new Class1<List<string>, Dictionary<int, string>>();
         }
 
         [TestMethod]
         public void TestMethod()
         {
-            var prop = sut.PropertyFoo;
+            var prop = _sut.PropertyFoo;
         }
 
         [TestMethod]
         public void TestProp()
         {
-            var res = sut.Foo(new List<string>(), new Dictionary<int, string>());
+            var res = _sut.Foo(new List<string>(), new Dictionary<int, string>());
         }
 
         [TestMethod]
         public void TestParameterizedGenericMethod()
         {
-            var res = sut.Foo(long.MaxValue, new List<string>());
+            var res = _sut.Foo(long.MaxValue, new List<string>());
         }
     }
 }
