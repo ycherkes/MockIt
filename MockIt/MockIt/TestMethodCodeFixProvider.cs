@@ -72,7 +72,6 @@ namespace MockIt
 
             var suts = testInitMethodDecl.GetSuts(testSemanticModel, declaredFields);
 
-            //todo handle the case when: _sut.List().Result instead of _sut.List()
             var memberAccessExpressions = invokationSyntax.DescendantNodes()
                 .OfType<ExpressionSyntax>()
                 .Where(x => x is InvocationExpressionSyntax || x is MemberAccessExpressionSyntax)
@@ -82,12 +81,11 @@ namespace MockIt
                     var invokationExpression = expr as InvocationExpressionSyntax;
                     var expression = invokationExpression == null ? memberAccess : invokationExpression.Expression;
                     return expression;
-                });//.First();
-
+                });
 
             var invokedMethodsOfMocks = memberAccessExpressions.SelectMany(expressionSyntax => GetInvokedMethodsOfMock(expressionSyntax, testSemanticModel, suts))
-                                                              .DistinctBy(x => x.MethodOrPropertySymbol)
-                                                              .ToArray();
+                                                               .DistinctBy(x => x.MethodOrPropertySymbol)
+                                                               .ToArray();
 
             if (invokedMethodsOfMocks.Length == 0)
                 return document;
@@ -220,8 +218,7 @@ namespace MockIt
                                                                               .Arguments
                                                                               .Select(y => GetSubstitutions(semanticModel, y))
                                                                               .SelectMany(s => s)
-                                                                              .ToDictionary(s => s.Key, s => s.Value), 
-                    //?? GetSubstitutions(semanticModel, z.Declaration.Type),
+                                                                              .ToDictionary(s => s.Key, s => s.Value),
                     SutSubstitutions = sutSubstitutions
                 }).ToArray();
         }

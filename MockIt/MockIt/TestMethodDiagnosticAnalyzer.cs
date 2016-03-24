@@ -20,6 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -150,7 +151,7 @@ namespace MockIt
                                   ?.DescendantNodes()
                                   .OfType<InvocationExpressionSyntax>()
                                   .Select(x => x.ToString())
-                                  .Any(x => mocksInvokations.Any(e => x.StartsWith(e + ".Setup"))) == true;
+                                  .Any(x => mocksInvokations.Any(e => Regex.IsMatch(x, e + @"\s*\.Setup"))) == true;
         }
 
         private static Func<TreeNode<DependencyField>, bool> IsCorrespondingField(SemanticModel semanticModel, IMethodSymbol x)

@@ -9,14 +9,6 @@ using MockIt.ThirdParty;
 
 namespace MockIt
 {
-    public class SetupsInfo
-    {
-        public ExpressionStatementSyntax Expression { get; set; }
-        public FieldDeclarationSyntax ReturnsField { get; set; }
-        public FieldDeclarationSyntax ParentField { get; set; }
-        public MemberAccessExpressionSyntax SetupIdentifierNode { get; set; }
-    }
-
     public static class TestSemanticHelper
     {
         public static MethodDeclarationSyntax GetTestInitializeMethod(SemanticModel semanticModel)
@@ -203,13 +195,11 @@ namespace MockIt
 
             var implicitDependencies = GetTestInitSetups(testInitMethodDecl, declaredFields);
 
-            foreach (var sutInfo in suts)
-            {
-                foreach (var field in sutInfo.InjectedFields)
-                {   
+            var allInjectedFields = suts.SelectMany(sutInfo => sutInfo.InjectedFields);
 
-                    FillSetupsTree(field, implicitDependencies, testInitMethodDecl, semanticModel);
-                }
+            foreach (var field in allInjectedFields)
+            {
+                FillSetupsTree(field, implicitDependencies);
             }
 
             return suts;
@@ -222,7 +212,7 @@ namespace MockIt
                 .Select(x => new
                 {
                     Expression = x,
-                    Match = Regex.Match(x.ToString(), @"(.+)\.(Setup){1}(Get){0,1}\(\s*(?<varName>\w+)\s*=>\s*\k<varName>\.(\w.+)((\(.*\){1})|'')\)\s*.Returns\((.+)\.Object\)")
+                    Match = Regex.Match(x.ToString(), @"(.+)\s*\.(Setup){1}(Get){0,1}\(\s*(?<varName>\w+)\s*=>\s*\k<varName>\.(\w.+)((\(.*\){1})|'')\)\s*.Returns\((.+)\.Object\)")
                 })
                 .Where(x => x.Match.Success)
                 .Select(x => new SetupsInfo
@@ -237,12 +227,8 @@ namespace MockIt
             return result;
         }
 
-        private static void FillSetupsTree(TreeNode<DependencyField> parentFieldSyntax, IReadOnlyCollection<SetupsInfo> setupsInfos, SyntaxNode testInitMethodDecl, SemanticModel semanticModel)
+        private static void FillSetupsTree(TreeNode<DependencyField> parentFieldSyntax, IReadOnlyCollection<SetupsInfo> setupsInfos)
         {
-            //var fieldType = parentFieldSyntax.Data.IsInjectedFromConstructor 
-            //                    ? ((GenericNameSyntax) parentFieldSyntax.Data.Field.Declaration.Type).TypeArgumentList.Arguments.First() 
-            //                    : parentFieldSyntax.Data.FieldTypeSyntax;
-
             var fieldSetups = setupsInfos.Where(x => x.ParentField == parentFieldSyntax.Data.Field).Select(x => new DependencyField
             {
                 Field = x.ReturnsField,
@@ -251,10 +237,11 @@ namespace MockIt
                 SetupIdentifierNode = x.SetupIdentifierNode
             }).ToArray();
 
-            foreach (var dependency in fieldSetups)
+            var addedSetups = fieldSetups.Select(parentFieldSyntax.AddChild);
+
+            foreach (var nodeFromDependency in addedSetups)
             {
-                var nodeFromDependency = parentFieldSyntax.AddChild(dependency);
-                FillSetupsTree(nodeFromDependency, setupsInfos, testInitMethodDecl, semanticModel);
+                FillSetupsTree(nodeFromDependency, setupsInfos);
             }
 
             //var fieldType = ((GenericNameSyntax)parentFieldSyntax.Data.Field.Declaration.Type).TypeArgumentList.Arguments.First();

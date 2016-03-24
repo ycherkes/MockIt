@@ -61,9 +61,8 @@ namespace MockIt
             if (symbolInfo.CandidateReason != CandidateReason.OverloadResolutionFailure)
                 return;
 
-            var invokedSymbol = symbolInfo.CandidateSymbols.FirstOrDefault(x => x is IMethodSymbol &&
-                                                                           ((IMethodSymbol) x).Parameters.All(
-                                                                               y => y.Type.IsAbstract));
+            var invokedSymbol = symbolInfo.CandidateSymbols.FirstOrDefault(x => x is IMethodSymbol 
+                                                                                /*&&((IMethodSymbol) x).Parameters.All(y => y.Type.IsAbstract)*/);
 
             if (invokedSymbol != null)
                 semanticModel.ReportDiagnostic(Diagnostic.Create(Rule, expression.Parent.GetLocation()));

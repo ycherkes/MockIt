@@ -70,8 +70,8 @@ namespace MockIt
 
             var symbolInfo = semanticModel.GetSymbolInfo(creationExpressionSyntax);
             
-            var invokedSymbol = (IMethodSymbol)symbolInfo.CandidateSymbols.FirstOrDefault(x => x is IMethodSymbol &&
-                                                                                          ((IMethodSymbol)x).Parameters.All(y => y.Type.IsAbstract));
+            var invokedSymbol = (IMethodSymbol)symbolInfo.CandidateSymbols.FirstOrDefault(x => x is IMethodSymbol
+                                                                                               /*&& ((IMethodSymbol)x).Parameters.All(y => y.Type.IsAbstract)*/);
             
             var constructorParameters = invokedSymbol.Parameters.Select(x => new ConstructorParameters
             {
