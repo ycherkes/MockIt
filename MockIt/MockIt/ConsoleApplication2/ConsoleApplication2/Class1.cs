@@ -7,11 +7,13 @@ namespace ConsoleApplication2
     {
         readonly IClass2<T> _class2;
         readonly IClass3<T1> _class3;
+        private readonly IFactoryClass _factoryClass;
 
-        public Class1(IClass2<T> class2, IClass3<T1> class3)
+        public Class1(IClass2<T> class2, IClass3<T1> class3, IFactoryClass factoryClass)
         {
             _class2 = class2;
             _class3 = class3;
+            _factoryClass = factoryClass;
         }        
 
         public Tuple<T, T1> PropertyFoo
@@ -40,6 +42,16 @@ namespace ConsoleApplication2
             _class3.Foo2(b);
             var firstRes = _class3.Foo;
             var secondRes = _class2.Foo;
+            return new Tuple<T, T1>(secondRes, firstRes);
+        }
+
+        public Tuple<T, T1> FooFromFactory(T a, T1 b)
+        {
+            var class2 = _factoryClass.GetClass2<T>();
+            var class3 = _factoryClass.GetClass3<T1>();
+            class3.Foo2(b);
+            var firstRes = class3.Foo;
+            var secondRes = class2.Foo;
             return new Tuple<T, T1>(secondRes, firstRes);
         }
     }
