@@ -47,11 +47,11 @@ namespace ConsoleApplication2
 
         public Tuple<T, T1> FooFromFactory(T a, T1 b)
         {
-            var class2 = _factoryClass.GetClass2<T>();
-            var class3 = _factoryClass.GetClass3<T1>();
-            class3.Foo2(b);
-            var firstRes = class3.Foo;
-            var secondRes = class2.Foo;
+            var class2 = _factoryClass.GetClass2<T1>();
+            var class3 = _factoryClass.GetClass3<T>();
+            class3.Foo2(a);
+            var firstRes = class2.Foo;
+            var secondRes = class3.Foo;
             return new Tuple<T, T1>(secondRes, firstRes);
         }
     }
