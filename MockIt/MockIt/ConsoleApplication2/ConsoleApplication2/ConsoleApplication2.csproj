@@ -44,6 +44,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Class1.cs" />
+    <Compile Include="IFactoryClass.cs" />
     <Compile Include="IClass1.cs" />
     <Compile Include="IClass2.cs" />
     <Compile Include="IClass3.cs" />
