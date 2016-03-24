@@ -72,6 +72,7 @@ namespace MockIt
 
             var suts = testInitMethodDecl.GetSuts(testSemanticModel, declaredFields);
 
+            //todo: contains expressions of top and nested levels that provides duplicates of diagnostics
             foreach (var expression in expressions)
             {
                 var symbol = testSemanticModel.GetSymbolInfo(expression).Symbol;
