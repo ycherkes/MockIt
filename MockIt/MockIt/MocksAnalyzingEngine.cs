@@ -15,6 +15,8 @@ namespace MockIt
             var isLeftSideOfAssignExpression = memberAccessExpresion.IsLeftSideOfAssignExpression();
             var symbol = testSemanticModel.GetSymbolInfo(memberAccessExpresion).Symbol;
 
+            if(symbol == null) return new Fields[0];
+
             var refType = symbol.ContainingType;
 
             var suitableSut = refType.GetSuitableSut(suts);
