@@ -50,34 +50,20 @@ namespace MockIt
             if (methodSymbol != null)
             {
                 //todo: determine the generic replacements correctly by semantic model from sut
-                
-                var returnType = GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, methodSymbol.ReturnType);
-                if (methodSymbol.ReturnType.ToDisplayString() != "void" 
-                        && methodSymbol.ReturnType.IsAbstract
-                        && methodSymbol.IsGenericMethod)
-                {
-                    var symbolDefinitionsReplacement = TestSemanticHelper.GetReplacedDefinitions(y.SutSubstitutions, methodSymbol.ReturnType);
 
-                    var definitionsReplacement = symbolDefinitionsReplacement as string[] ??
-                                                 symbolDefinitionsReplacement.ToArray();
-
-                    if (definitionsReplacement.Any())
-                    {
-                        returnType = definitionsReplacement.First();
-                    }
-                }
+                var returnType = GetReplacedType(methodSymbol.ReturnType, y.Substitutions, y.SutSubstitutions);
 
                 return new[]
                 {
                     f + ".#ToReplace#(x => x." +
                     GetMethodName(methodSymbol, y.Substitutions, y.SutSubstitutions) + "(" +
                     Join(", ", methodSymbol.Parameters.Select(z => "It.Is<" +
-                                                                          GetSimpleTypeName(y.Substitutions,
-                                                                              y.SutSubstitutions, z.Type) +
+                                                                          GetReplacedType(z.Type, y.Substitutions,
+                                                                              y.SutSubstitutions) +
                                                                           ">(" + z.Name + " => " + z.Name +
                                                                           " == default(" +
-                                                                          GetSimpleTypeName(y.Substitutions,
-                                                                              y.SutSubstitutions, z.Type) +
+                                                                          GetReplacedType(z.Type, y.Substitutions,
+                                                                              y.SutSubstitutions) +
                                                                           "))")) + "))" +
                     (methodSymbol.ReturnType.ToDisplayString() != "void" //todo: to rigth determine generic return type
                         ? ".Returns(default(" + returnType + "))"
@@ -107,6 +93,25 @@ namespace MockIt
             return expressions;
         }
 
+        private static string GetReplacedType(ITypeSymbol typeSymbol, Dictionary<string, ITypeSymbol> substitutions,
+            Dictionary<string, ITypeSymbol> sutSubstitutions)
+        {
+            var type = GetSimpleTypeName(substitutions, sutSubstitutions, typeSymbol);
+            if (typeSymbol.ToDisplayString() != "void"
+                    && typeSymbol.IsAbstract
+                    && (typeSymbol as INamedTypeSymbol)?.IsGenericType == true)
+            {
+                var symbolDefinitionsReplacement = TestSemanticHelper.GetReplacedDefinitions(sutSubstitutions, typeSymbol);
+
+                if (symbolDefinitionsReplacement.Any())
+                {
+                    type = (symbolDefinitionsReplacement.FirstOrDefault(z => z.IsReplaced) ?? symbolDefinitionsReplacement.First()).Result;
+                }
+            }
+
+            return type;
+        }
+
         private static string GetMethodName(IMethodSymbol methodSymbol, 
             IReadOnlyDictionary<string, ITypeSymbol> substitutions,
             IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
@@ -130,12 +135,11 @@ namespace MockIt
             ITypeSymbol substitution;
             ITypeSymbol sutSubstitution;
 
-            return TestSemanticHelper.GetSimpleTypeName(
-                substitutions.TryGetValue(typeSymbol.ToString(), out substitution)
-                    ? substitution
-                    : sutSubstitutions.TryGetValue(typeSymbol.ToString(), out sutSubstitution)
-                        ? sutSubstitution
-                        : typeSymbol);
+            return (substitutions.TryGetValue(typeSymbol.ToString(), out substitution)
+                ? substitution
+                : sutSubstitutions.TryGetValue(typeSymbol.ToString(), out sutSubstitution)
+                    ? sutSubstitution
+                    : typeSymbol).GetSimpleTypeName();
         }
 
         public static void ApplyChanges(SyntaxNode invokationSyntax, 

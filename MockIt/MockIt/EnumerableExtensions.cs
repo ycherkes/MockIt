@@ -7,9 +7,10 @@ namespace MockIt
 {
     public static class EnumerableExtensions
     {
-        public static IEnumerable<T> DistinctBy<T, TKey>(this IEnumerable<T> items, Func<T, TKey> property)
+        public static IEnumerable<T> DistinctBy<T, TKey>(this IEnumerable<T> items, Func<T, TKey> property, bool last = false)
         {
-            return items.GroupBy(property).Select(x => x.First());
+            Func<IGrouping<TKey, T>, T> firstOrLastFunc = x => last ? x.Last() : x.First();
+            return items.GroupBy(property).Select(firstOrLastFunc);
         }
 
         public static IEnumerable<TreeNode<T>> Find<T>(this IEnumerable<TreeNode<T>> items, Func<TreeNode<T>, bool> predicate)

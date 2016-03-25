@@ -332,7 +332,7 @@ namespace MockIt
             return new[] { z.Declaration.Variables.FirstOrDefault()?.Identifier.Text + ".Object", z.Declaration.Variables.FirstOrDefault()?.Identifier.Text }.Contains(y.Expression.GetText().ToString().Trim());
         }
 
-        public static IEnumerable<string> GetReplacedDefinitions(IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions, ISymbol typeSymbol)
+        public static IReadOnlyCollection<ReplacementInfo> GetReplacedDefinitions(IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions, ISymbol typeSymbol)
         {
             var replacements = sutSubstitutions.Select(kv => new[]
             {
@@ -344,7 +344,10 @@ namespace MockIt
 
             var originalType = GetSimpleTypeName(typeSymbol);
 
-            var replacedDefinition = replacements.Select(s => s.Aggregate(originalType, (sum, repl) => sum.Replace(repl.Original, repl.Replacement)));
+            var replacedDefinition = replacements.Select(s => s.Aggregate(originalType, (sum, repl) => sum.Replace(repl.Original, repl.Replacement)))
+                                                 .Select(x => new ReplacementInfo { IsReplaced = x != originalType, Result = x})
+                                                 .ToArray();
+
             return replacedDefinition;
         }
 
