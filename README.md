@@ -1,5 +1,5 @@
 # MockIt
-A simple Visual Studio 2015 extension to automate of creating and configuring mocks in the unit tests
+A Visual Studio 2015 extension to automate the mocks creating and configuring in the unit tests
 
 It helps you to automate mocks creating in your unit tests.
 
@@ -30,12 +30,10 @@ I didn't find how to publish here an extension with type 'tool' for VS Community
 
 It's also available via NuGet https://www.nuget.org/packages/MockIt/
  
-Plans: 
-
-simple events support
-
 Release History:
 
  v 1.0.0.10 Fixed mocks detection when mocked classes/interfaces are declared in different assembly than sut
+ ...
+ v 1.0.0.17 Partial support the chains of mocks
 
 ![alt tag](https://raw.githubusercontent.com/ycherkes/MockIt/master/MockIto.gif)
