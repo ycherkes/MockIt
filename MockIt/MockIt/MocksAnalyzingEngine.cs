@@ -72,7 +72,7 @@ namespace MockIt
         private static bool IsExistInSetups(Fields fields, IEnumerable<TreeNode<DependencyField>> injectedFields, IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
         {
             return injectedFields.Any(x => x.FindTreeNodes(y => y.Parent != null
-                                                                && IsMemberEquals(fields.MethodOrPropertySymbol, sutSubstitutions, y.Data.SetupIdentifierNode.Name)
+                                                                && IsMemberEquals(fields.MethodOrPropertySymbol, sutSubstitutions, y.Data.SetupIdentifierNode?.Name)
                                                                 && fields.FieldsToSetup.Any(z => z.Field.Any(w => y.Parent.Data.Field.Declaration.Variables.Any(t => t.Identifier.Text == w)))).Any());
         }
 

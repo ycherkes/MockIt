@@ -64,6 +64,9 @@ namespace MockIt
 
             var testInitMethodDecl = TestSemanticHelper.GetTestInitializeMethod(testSemanticModel);
 
+            if(testInitMethodDecl == null)
+                return;
+
             var declaredFields = testInitMethodDecl.Parent.ChildNodes().OfType<FieldDeclarationSyntax>().ToArray();
 
             var suts = testInitMethodDecl.GetSuts(testSemanticModel, declaredFields);
