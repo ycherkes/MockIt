@@ -68,7 +68,7 @@ namespace MockIt
 
             var suts = testInitMethodDecl.GetSuts(testSemanticModel, declaredFields);
 
-            var mockableExpressions = memberAccessExpressions.Where(expressionSyntax => !IsNotExpressionNeedsToMock(MocksAnalyzer.GetInvokedMethodsOfMock(expressionSyntax, testSemanticModel, suts)
+            var mockableExpressions = memberAccessExpressions.Where(expressionSyntax => !IsNotExpressionNeedsToMock(MocksAnalyzingEngine.GetInvokedMethodsOfMock(expressionSyntax, testSemanticModel, suts)
                                                                                                                                  .SelectMany(x => x.FieldsToSetup
                                                                                                                                                    .SelectMany(y => y.Field))
                                                                                                                                  .Distinct()

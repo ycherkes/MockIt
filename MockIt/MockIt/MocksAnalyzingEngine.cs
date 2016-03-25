@@ -8,7 +8,7 @@ using MockIt.ThirdParty;
 
 namespace MockIt
 {
-    public class MocksAnalyzer
+    public class MocksAnalyzingEngine
     {
         public static IEnumerable<Fields> GetInvokedMethodsOfMock(ExpressionSyntax memberAccessExpresion, SemanticModel testSemanticModel, IEnumerable<SutInfo> suts)
         {
@@ -43,22 +43,21 @@ namespace MockIt
                 count = allSyntax.Count;
 
                 var methods = TestSemanticHelper.GetMethodsToConfigureMocks(allNodes);
-                var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(allNodes, methods,
-                    isLeftSideOfAssignExpression);
+                var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(allNodes, methods, isLeftSideOfAssignExpression);
 
                 allSyntax.AddRange(methods.Concat(properties).Distinct());
                 allSyntax = allSyntax.Distinct().ToList();
 
                 allNodes = allSyntax.SelectMany(syn => syn.DescendantNodesAndSelf())
-                    .SelectMany<SyntaxNode, SyntaxNode>(x => GetReferencedNodes(x, sutSemanticModel))
-                    .ToList();
+                                    .SelectMany(x => GetReferencedNodes(x, sutSemanticModel))
+                                    .ToList();
             }
 
             var invokedMethodsOfMocks = GetInvokedMethodsOfMocks(allSyntax,
-                sutSemanticModel,
-                suitableSut,
-                testSemanticModel,
-                sutSubstitutions);
+                                                                 sutSemanticModel,
+                                                                 suitableSut,
+                                                                 testSemanticModel,
+                                                                 sutSubstitutions);
 
             invokedMethodsOfMocks = invokedMethodsOfMocks.Where(DontHaveSetups(suitableSut, sutSubstitutions));
 
@@ -129,7 +128,7 @@ namespace MockIt
                     Field = z.Data.Field.Declaration.Variables.Select(f => f.Identifier.ValueText),
                     Substitutions = (z.Data.Field.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
                         .Arguments
-                        .Select<TypeSyntax, Dictionary<string, ITypeSymbol>>(y => GetSubstitutions(semanticModel, y))
+                        .Select(y => GetSubstitutions(semanticModel, y))
                         .SelectMany(s => s)
                         .ToDictionary(s => s.Key, s => s.Value),
                     SutSubstitutions = sutSubstitutions
@@ -157,7 +156,7 @@ namespace MockIt
             if (methodSymbol == null && propertySymbol == null)
                 return false;
 
-            var ct = methodSymbol != null ? methodSymbol.ReceiverType : propertySymbol?.ContainingType;
+            var ct = methodSymbol != null ? methodSymbol.ReceiverType : propertySymbol.ContainingType;
             var symbolDefinitionsReplacement = TestSemanticHelper.GetReplacedDefinitions(sutSubstitutions, ct);
             
             var ctName = ct.GetSimpleTypeName();

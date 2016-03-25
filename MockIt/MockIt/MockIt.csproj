@@ -40,7 +40,7 @@
     <Compile Include="EnumerableExtensions.cs" />
     <Compile Include="Fields.cs" />
     <Compile Include="FieldsSetups.cs" />
-    <Compile Include="MocksAnalyzer.cs" />
+    <Compile Include="MocksAnalyzingEngine.cs" />
     <Compile Include="ReplacementInfo.cs" />
     <Compile Include="SetupsInfo.cs" />
     <Compile Include="SutInfo.cs" />

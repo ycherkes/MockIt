@@ -58,7 +58,7 @@ namespace MockIt
 
         private static string GetTypeNameFromType(ISymbol symbol)
         {
-            return TestSemanticHelper.GetSimpleTypeName(symbol);
+            return symbol.GetSimpleTypeName();
         }
 
         private static async Task<Document> MakeMock(Document document, ExpressionStatementSyntax creation,
