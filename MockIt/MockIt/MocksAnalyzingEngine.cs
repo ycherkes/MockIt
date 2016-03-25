@@ -139,7 +139,7 @@ namespace MockIt
             ISymbol symbol,
             IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
         {
-            return z => (z.Data.Field.Declaration.Type as GenericNameSyntax)?.TypeArgumentList.Arguments.Any(y => IsCorrespondingType(semanticModel, y, symbol, sutSubstitutions, z)) ?? false;
+            return z => (z.Data.Field?.Declaration.Type as GenericNameSyntax)?.TypeArgumentList.Arguments.Any(y => IsCorrespondingType(semanticModel, y, symbol, sutSubstitutions, z)) ?? false;
         }
 
         private static bool IsCorrespondingType(SemanticModel semanticModel, 
@@ -150,6 +150,15 @@ namespace MockIt
         {
             var symbol = semanticModel.GetSymbolInfo(y).Symbol;
 
+            return IsCorrespondingType(semanticModel, symbol, x, sutSubstitutions, treeNode);
+        }
+
+        private static bool IsCorrespondingType(SemanticModel semanticModel,
+            ISymbol symbol,
+            ISymbol x,
+            IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions,
+            TreeNode<DependencyField> treeNode)
+        {
             var methodSymbol = x as IMethodSymbol;
             var propertySymbol = x as IPropertySymbol;
 
@@ -158,12 +167,13 @@ namespace MockIt
 
             var ct = methodSymbol != null ? methodSymbol.ReceiverType : propertySymbol.ContainingType;
             var symbolDefinitionsReplacement = TestSemanticHelper.GetReplacedDefinitions(sutSubstitutions, ct);
-            
+
             var ctName = ct.GetSimpleTypeName();
 
             return (symbol.GetSimpleTypeName() == ctName
                     || symbolDefinitionsReplacement.Select(z => z.Result).Contains(symbol.GetSimpleTypeName()))
-                   && !treeNode.FindChildTreeNodes(z => IsCorrespondingField(semanticModel, x, sutSubstitutions)(z)).Any();
+                   && !treeNode.FindChildTreeNodes(z => IsCorrespondingField(semanticModel, x, sutSubstitutions)(z)).Any()
+                   || (symbol as INamedTypeSymbol)?.AllInterfaces.Any(z => IsCorrespondingType(semanticModel, z, x, sutSubstitutions, treeNode)) == true;
         }
 
         private static bool IsMemberEquals(ISymbol methodOrPropertySymbol, IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions, SimpleNameSyntax name)
