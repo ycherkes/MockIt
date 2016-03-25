@@ -32,12 +32,17 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ChainOfCallsInjections.cs" />
     <Compile Include="ChangesMaker.cs" />
     <Compile Include="ConstructorInjections.cs" />
     <Compile Include="ConstructorParameters.cs" />
+    <Compile Include="DependencyField.cs" />
     <Compile Include="EnumerableExtensions.cs" />
     <Compile Include="Fields.cs" />
     <Compile Include="FieldsSetups.cs" />
+    <Compile Include="MocksAnalyzingEngine.cs" />
+    <Compile Include="ReplacementInfo.cs" />
+    <Compile Include="SetupsInfo.cs" />
     <Compile Include="SutInfo.cs" />
     <Compile Include="SyntaxNodeExtensions.cs" />
     <Compile Include="TestMethodCodeFixProvider.cs" />
@@ -51,6 +56,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="TestSemanticHelper.cs" />
+    <Compile Include="ThirdParty\TreeNode.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources.resx">

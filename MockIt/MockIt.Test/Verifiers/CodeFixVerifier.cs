@@ -42,7 +42,7 @@ namespace MockIt.Test.Verifiers
         /// <param name="allowNewCompilerDiagnostics">A bool controlling whether or not the test will fail if the CodeFix introduces other warnings after being applied</param>
         protected void VerifyCSharpFix(string oldSource, string newSource, int? codeFixIndex = null, bool allowNewCompilerDiagnostics = false)
         {
-            VerifyFix(LanguageNames.CSharp, GetCSharpDiagnosticAnalyzer(), GetCSharpCodeFixProvider(), oldSource, newSource, codeFixIndex, allowNewCompilerDiagnostics);
+            VerifyFix(LanguageNames.CSharp, GetCSharpDiagnosticAnalyzer(), GetCSharpCodeFixProvider(), oldSource, newSource, codeFixIndex);
         }
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace MockIt.Test.Verifiers
         /// <param name="allowNewCompilerDiagnostics">A bool controlling whether or not the test will fail if the CodeFix introduces other warnings after being applied</param>
         protected void VerifyBasicFix(string oldSource, string newSource, int? codeFixIndex = null, bool allowNewCompilerDiagnostics = false)
         {
-            VerifyFix(LanguageNames.VisualBasic, GetBasicDiagnosticAnalyzer(), GetBasicCodeFixProvider(), oldSource, newSource, codeFixIndex, allowNewCompilerDiagnostics);
+            VerifyFix(LanguageNames.VisualBasic, GetBasicDiagnosticAnalyzer(), GetBasicCodeFixProvider(), oldSource, newSource, codeFixIndex);
         }
 
         /// <summary>
@@ -69,15 +69,14 @@ namespace MockIt.Test.Verifiers
         /// <param name="oldSource">A class in the form of a string before the CodeFix was applied to it</param>
         /// <param name="newSource">A class in the form of a string after the CodeFix was applied to it</param>
         /// <param name="codeFixIndex">Index determining which codefix to apply if there are multiple</param>
-        /// <param name="allowNewCompilerDiagnostics">A bool controlling whether or not the test will fail if the CodeFix introduces other warnings after being applied</param>
-        private void VerifyFix(string language, DiagnosticAnalyzer analyzer, CodeFixProvider codeFixProvider, string oldSource, string newSource, int? codeFixIndex, bool allowNewCompilerDiagnostics)
+        private static void VerifyFix(string language, DiagnosticAnalyzer analyzer, CodeFixProvider codeFixProvider, string oldSource, string newSource, int? codeFixIndex)
         {
             var document = CreateDocument(oldSource, language);
             var analyzerDiagnostics = GetSortedDiagnosticsFromDocuments(analyzer, new[] { document });
-            var compilerDiagnostics = CodeFixVerifier.GetCompilerDiagnostics(document);
+            
             var attempts = analyzerDiagnostics.Length;
 
-            for (int i = 0; i < attempts; ++i)
+            for (var i = 0; i < attempts; ++i)
             {
                 var actions = new List<CodeAction>();
                 var context = new CodeFixContext(document, analyzerDiagnostics[0], (a, d) => actions.Add(a), CancellationToken.None);
@@ -90,11 +89,11 @@ namespace MockIt.Test.Verifiers
 
                 if (codeFixIndex != null)
                 {
-                    document = CodeFixVerifier.ApplyFix(document, actions.ElementAt((int)codeFixIndex));
+                    document = ApplyFix(document, actions.ElementAt((int)codeFixIndex));
                     break;
                 }
 
-                document = CodeFixVerifier.ApplyFix(document, actions.ElementAt(0));
+                document = ApplyFix(document, actions.ElementAt(0));
                 analyzerDiagnostics = GetSortedDiagnosticsFromDocuments(analyzer, new[] { document });
 
                 //var newCompilerDiagnostics = GetNewDiagnostics(compilerDiagnostics, GetCompilerDiagnostics(document));
@@ -117,7 +116,7 @@ namespace MockIt.Test.Verifiers
             }
 
             //after applying all of the code fixes, compare the resulting string to the inputted one
-            var actual = CodeFixVerifier.GetStringFromDocument(document);
+            var actual = GetStringFromDocument(document);
             Assert.AreEqual(newSource, actual);
         }
     }

@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using MockIt.ThirdParty;
 
 namespace MockIt
 {
@@ -52,13 +54,6 @@ namespace MockIt
             return properties;
         }
 
-        //public static ExpressionSyntax[] GetMethodsToConfigureMocks(IEnumerable<SyntaxNode> nodes)
-        //{
-        //    var methods = nodes.SelectMany(GetMethodsToConfigureMocks).ToArray();
-
-        //    return methods;
-        //}
-
         public static IEnumerable<MemberAccessExpressionSyntax> GetPropertiesToConfigureMocks(IEnumerable<SyntaxNode> nodes,
             IEnumerable<ExpressionSyntax> methods, bool isLeftSideOfAssignExpression)
         {
@@ -102,7 +97,7 @@ namespace MockIt
             return methods;
         }
 
-        public static string GetSimpleTypeName(ISymbol type)
+        public static string GetSimpleTypeName(this ISymbol type)
         {
             return type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
         }
@@ -173,22 +168,115 @@ namespace MockIt
             return firstSymbol.Name == secondSymbol.Name;
         }
 
+        //todo .. and implicit fields also
         public static IReadOnlyCollection<SutInfo> GetSuts(this SyntaxNode testInitMethodDecl, SemanticModel semanticModel,
-            IEnumerable<FieldDeclarationSyntax> declaredFields)
+            IReadOnlyCollection<FieldDeclarationSyntax> declaredFields, bool fillImplicitDependencies = true)
         {
             var suts = testInitMethodDecl.DescendantNodes()
                 .OfType<ObjectCreationExpressionSyntax>()
                 .Select(x => new SutInfo
                 {
                     SymbolInfo = semanticModel.GetSymbolInfo(x.Type),
-                    DeclaredFields =
-                        declaredFields.Where(z => x.ArgumentList != null 
-                                                  && x.ArgumentList.Arguments.Any(y => IsSuitableDeclaredField(z, y))).ToArray()
+                    //excplicitly declared fields
+                    InjectedFields = declaredFields.Where(z => x.ArgumentList != null 
+                                                               && x.ArgumentList.Arguments.Any(y => IsSuitableDeclaredField(z, y)))
+                                                    .Select(y => new DependencyField
+                                                    {
+                                                        Field = y,
+                                                        IsInjectedFromConstructor = true
+                                                    })
+                                                    .Select(y => new TreeNode<DependencyField>(y))
+                                                   .ToArray()
                 })
-                .Where(x => x.DeclaredFields.Any())
+                .Where(x => x.InjectedFields.Any())
                 .ToArray();
 
+            if (!fillImplicitDependencies) return suts;
+
+            var implicitDependencies = GetTestInitSetups(testInitMethodDecl, declaredFields);
+
+            var allInjectedFields = suts.SelectMany(sutInfo => sutInfo.InjectedFields);
+
+            foreach (var field in allInjectedFields)
+            {
+                FillSetupsTree(field, implicitDependencies);
+            }
+
             return suts;
+        }
+
+        private static IReadOnlyCollection<SetupsInfo> GetTestInitSetups(SyntaxNode testInitMethodDecl, IReadOnlyCollection<FieldDeclarationSyntax> declaredFields)
+        {
+            var result =  testInitMethodDecl.DescendantNodes()
+                .OfType<ExpressionStatementSyntax>()
+                .Select(x => new
+                {
+                    Expression = x,
+                    Match = Regex.Match(x.ToString(), @"(.+)\s*\.(Setup){1}(Get){0,1}\(\s*(?<varName>\w+)\s*=>\s*\k<varName>\.(\w.+)((\(.*\){1})|'')\)\s*.Returns\((.+)\.Object\)")
+                })
+                .Where(x => x.Match.Success)
+                .Select(x => new SetupsInfo
+                {
+                    Expression = x.Expression,
+                    ParentField = declaredFields.FirstOrDefault(y => y.Declaration.Variables.Any(z => z.Identifier.Text == x.Match.Groups[1].Value.Trim())),
+                    SetupIdentifierNode = x.Expression.DescendantNodes().OfType<MemberAccessExpressionSyntax>().FirstOrDefault(y => y.Name.ToString() == x.Match.Groups[4].Value.Trim()),
+                    ReturnsField = declaredFields.FirstOrDefault(y => y.Declaration.Variables.Any(z => z.Identifier.Text == x.Match.Groups[7].Value.Trim())),
+                })
+                .ToArray();
+
+            return result;
+        }
+
+        private static void FillSetupsTree(TreeNode<DependencyField> parentFieldSyntax, IReadOnlyCollection<SetupsInfo> setupsInfos)
+        {
+            var fieldSetups = setupsInfos.Where(x => x.ParentField == parentFieldSyntax.Data.Field).Select(x => new DependencyField
+            {
+                Field = x.ReturnsField,
+                IsInjectedFromConstructor = false,
+                SetupExpression = x.Expression,
+                SetupIdentifierNode = x.SetupIdentifierNode
+            }).ToArray();
+
+            var addedSetups = fieldSetups.Select(parentFieldSyntax.AddChild);
+
+            foreach (var nodeFromDependency in addedSetups)
+            {
+                FillSetupsTree(nodeFromDependency, setupsInfos);
+            }
+
+            //var fieldType = ((GenericNameSyntax)parentFieldSyntax.Data.Field.Declaration.Type).TypeArgumentList.Arguments.First();
+
+            //var fieldTree = fieldType.SyntaxTree;
+            //var fieldSemanticModel = GetModelFromSyntaxTree(fieldTree, semanticModel.Compilation);
+            //var symbolInfo = fieldSemanticModel.GetSymbolInfo(fieldType);
+
+            //var  symbol = symbolInfo.Symbol as INamedTypeSymbol;
+
+            //if (!(symbol?.IsAbstract ?? false))
+            //    return;
+
+            //var fieldTypeMembers = symbol.DeclaringSyntaxReferences
+            //    .SelectMany(x => x.GetSyntax().DescendantNodes())
+            //    .Where(
+            //        x =>
+            //            symbol.TypeKind == TypeKind.Interface ||
+            //            ((x as MethodDeclarationSyntax)?.Modifiers.Contains(
+            //                SyntaxFactory.Token(SyntaxKind.PublicKeyword)) ?? false)
+            //            ||
+            //            ((x as PropertyDeclarationSyntax)?.Modifiers.Contains(
+            //                SyntaxFactory.Token(SyntaxKind.PublicKeyword)) ?? false))
+            //    .OfType<MemberDeclarationSyntax>();
+
+            //var implicitDependencies = fieldTypeMembers.Distinct()
+            //                                           .ToList();
+
+            //var dependencies = ChangesMaker.MakeChainOfCallsInjections(implicitDependencies, parentFieldSyntax, semanticModel);
+
+            //foreach (var dependency in dependencies)
+            //{
+            //    var nodeFromDependency = parentFieldSyntax.AddChild(dependency);
+            //    FillSetupsTree(nodeFromDependency, semanticModel, testInitMethodDecl, setupsInfos);
+            //}
         }
 
         public static SutInfo GetSuitableSut(this INamedTypeSymbol refType, IEnumerable<SutInfo> suts)
@@ -244,7 +332,7 @@ namespace MockIt
             return new[] { z.Declaration.Variables.FirstOrDefault()?.Identifier.Text + ".Object", z.Declaration.Variables.FirstOrDefault()?.Identifier.Text }.Contains(y.Expression.GetText().ToString().Trim());
         }
 
-        public static IEnumerable<string> GetReplacedDefinitions(IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions, ISymbol typeSymbol)
+        public static IReadOnlyCollection<ReplacementInfo> GetReplacedDefinitions(IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions, ISymbol typeSymbol)
         {
             var replacements = sutSubstitutions.Select(kv => new[]
             {
@@ -256,7 +344,10 @@ namespace MockIt
 
             var originalType = GetSimpleTypeName(typeSymbol);
 
-            var replacedDefinition = replacements.Select(s => s.Aggregate(originalType, (sum, repl) => sum.Replace(repl.Original, repl.Replacement)));
+            var replacedDefinition = replacements.Select(s => s.Aggregate(originalType, (sum, repl) => sum.Replace(repl.Original, repl.Replacement)))
+                                                 .Select(x => new ReplacementInfo { IsReplaced = x != originalType, Result = x})
+                                                 .ToArray();
+
             return replacedDefinition;
         }
 

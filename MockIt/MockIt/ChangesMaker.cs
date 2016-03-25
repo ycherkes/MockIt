@@ -50,34 +50,20 @@ namespace MockIt
             if (methodSymbol != null)
             {
                 //todo: determine the generic replacements correctly by semantic model from sut
-                
-                var returnType = GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, methodSymbol.ReturnType);
-                if (methodSymbol.ReturnType.ToDisplayString() != "void" 
-                        && methodSymbol.ReturnType.IsAbstract
-                        && methodSymbol.IsGenericMethod)
-                {
-                    var symbolDefinitionsReplacement = TestSemanticHelper.GetReplacedDefinitions(y.SutSubstitutions, methodSymbol.ReturnType);
 
-                    var definitionsReplacement = symbolDefinitionsReplacement as string[] ??
-                                                 symbolDefinitionsReplacement.ToArray();
-
-                    if (definitionsReplacement.Any())
-                    {
-                        returnType = definitionsReplacement.First();
-                    }
-                }
+                var returnType = GetReplacedType(methodSymbol.ReturnType, y.Substitutions, y.SutSubstitutions);
 
                 return new[]
                 {
                     f + ".#ToReplace#(x => x." +
                     GetMethodName(methodSymbol, y.Substitutions, y.SutSubstitutions) + "(" +
                     Join(", ", methodSymbol.Parameters.Select(z => "It.Is<" +
-                                                                          GetSimpleTypeName(y.Substitutions,
-                                                                              y.SutSubstitutions, z.Type) +
+                                                                          GetReplacedType(z.Type, y.Substitutions,
+                                                                              y.SutSubstitutions) +
                                                                           ">(" + z.Name + " => " + z.Name +
                                                                           " == default(" +
-                                                                          GetSimpleTypeName(y.Substitutions,
-                                                                              y.SutSubstitutions, z.Type) +
+                                                                          GetReplacedType(z.Type, y.Substitutions,
+                                                                              y.SutSubstitutions) +
                                                                           "))")) + "))" +
                     (methodSymbol.ReturnType.ToDisplayString() != "void" //todo: to rigth determine generic return type
                         ? ".Returns(default(" + returnType + "))"
@@ -107,6 +93,25 @@ namespace MockIt
             return expressions;
         }
 
+        private static string GetReplacedType(ITypeSymbol typeSymbol, Dictionary<string, ITypeSymbol> substitutions,
+            Dictionary<string, ITypeSymbol> sutSubstitutions)
+        {
+            var type = GetSimpleTypeName(substitutions, sutSubstitutions, typeSymbol);
+            if (typeSymbol.ToDisplayString() != "void"
+                    && typeSymbol.IsAbstract
+                    && (typeSymbol as INamedTypeSymbol)?.IsGenericType == true)
+            {
+                var symbolDefinitionsReplacement = TestSemanticHelper.GetReplacedDefinitions(sutSubstitutions, typeSymbol);
+
+                if (symbolDefinitionsReplacement.Any())
+                {
+                    type = (symbolDefinitionsReplacement.FirstOrDefault(z => z.IsReplaced) ?? symbolDefinitionsReplacement.First()).Result;
+                }
+            }
+
+            return type;
+        }
+
         private static string GetMethodName(IMethodSymbol methodSymbol, 
             IReadOnlyDictionary<string, ITypeSymbol> substitutions,
             IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
@@ -130,12 +135,11 @@ namespace MockIt
             ITypeSymbol substitution;
             ITypeSymbol sutSubstitution;
 
-            return TestSemanticHelper.GetSimpleTypeName(
-                substitutions.TryGetValue(typeSymbol.ToString(), out substitution)
-                    ? substitution
-                    : sutSubstitutions.TryGetValue(typeSymbol.ToString(), out sutSubstitution)
-                        ? sutSubstitution
-                        : typeSymbol);
+            return (substitutions.TryGetValue(typeSymbol.ToString(), out substitution)
+                ? substitution
+                : sutSubstitutions.TryGetValue(typeSymbol.ToString(), out sutSubstitution)
+                    ? sutSubstitution
+                    : typeSymbol).GetSimpleTypeName();
         }
 
         public static void ApplyChanges(SyntaxNode invokationSyntax, 
@@ -190,7 +194,7 @@ namespace MockIt
                                         SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
                                             SyntaxFactory.IdentifierName(x.TypeName)))))
                             .WithArgumentList(SyntaxFactory.ArgumentList()))),
-                CreationArgument = (SyntaxNodeOrToken) SyntaxFactory.Argument(
+                CreationArgument = SyntaxFactory.Argument(
                     SyntaxFactory.MemberAccessExpression(
                         SyntaxKind.SimpleMemberAccessExpression,
                         SyntaxFactory.IdentifierName(x.ArgumentName + "Mock"),
@@ -198,6 +202,126 @@ namespace MockIt
             }).ToArray();
             return changes;
         }
+
+        //public static IEnumerable<DependencyField> MakeChainOfCallsInjections(IReadOnlyCollection<MemberDeclarationSyntax> implicitDependencies, TreeNode<DependencyField> parentFieldSyntax, SemanticModel semanticModel)
+        //{
+        //    var changes = implicitDependencies.Select(x => new DependencyField
+        //    {
+        //        //FieldTypeSyntax = GetLeafTypeSyntax(x),
+        //        Field = SyntaxFactory.FieldDeclaration(
+        //            SyntaxFactory.VariableDeclaration(
+        //                SyntaxFactory.GenericName(
+        //                    SyntaxFactory.Identifier("Mock"))
+        //                    .WithTypeArgumentList(
+        //                        SyntaxFactory.TypeArgumentList(
+        //                            SyntaxFactory.SingletonSeparatedList(GetLeafTypeSyntax(x)))))
+        //                .WithVariables(
+        //                    SyntaxFactory.SingletonSeparatedList(
+        //                        SyntaxFactory.VariableDeclarator(
+        //                            SyntaxFactory.Identifier(/*x.ArgumentName*/ GetIdentifierName(x, parentFieldSyntax) + "Mock")))))
+        //            .WithModifiers(
+        //                SyntaxFactory.TokenList(
+        //                    SyntaxFactory.Token(SyntaxKind.PrivateKeyword))),
+        //        //NewExpression = SyntaxFactory.ExpressionStatement(
+        //        //    SyntaxFactory.AssignmentExpression(
+        //        //        SyntaxKind.SimpleAssignmentExpression,
+        //        //        SyntaxFactory.IdentifierName(GetIdentifierName(x, parentFieldSyntax) + "Mock"),
+        //        //        SyntaxFactory.ObjectCreationExpression(
+        //        //            SyntaxFactory.GenericName(
+        //        //                SyntaxFactory.Identifier("Mock"))
+        //        //                .WithTypeArgumentList(
+        //        //                    SyntaxFactory.TypeArgumentList(
+        //        //                        SyntaxFactory.SingletonSeparatedList(GetLeafTypeSyntax(x)))))
+        //        //            .WithArgumentList(SyntaxFactory.ArgumentList()))),
+        //        //SetupExpression = null
+        //    }).ToArray();
+        //    return changes;
+        //}
+
+        //private static ITypeSymbol GetIdentifierType(MemberDeclarationSyntax memberDeclarationSyntax, SemanticModel semanticModel)
+        //{
+        //    var memberModel = memberDeclarationSyntax.GetModelFromNode(semanticModel.Compilation);
+        //    var typeSyntax = GetLeafTypeSyntax(memberDeclarationSyntax);
+        //    var symbolInfo = memberModel.GetSymbolInfo(typeSyntax);
+            
+        //    return symbolInfo.Symbol as ITypeSymbol;
+        //}
+
+        //private static TypeSyntax GetLeafTypeSyntax(MemberDeclarationSyntax memberDeclarationSyntax)
+        //{
+        //    var propertyDeclarationSyntax = memberDeclarationSyntax as PropertyDeclarationSyntax;
+        //    if (propertyDeclarationSyntax != null)
+        //    {
+        //        {
+        //            return propertyDeclarationSyntax.Type;
+        //        }
+        //    }
+
+        //    var methodDeclarationSyntax = memberDeclarationSyntax as MethodDeclarationSyntax;
+        //    if (methodDeclarationSyntax != null)
+        //    {
+        //        {
+        //            return methodDeclarationSyntax.ReturnType;
+        //        }
+        //    }
+
+        //    var fieldDeclarationSyntax = memberDeclarationSyntax as FieldDeclarationSyntax;
+        //    if (fieldDeclarationSyntax != null)
+        //    {
+        //        {
+        //            return fieldDeclarationSyntax.Declaration.Type;
+        //        }
+        //    }
+
+        //    throw new NotSupportedException();
+        //}
+
+        //private static string GetIdentifierName(MemberDeclarationSyntax memberDeclarationSyntax, TreeNode<DependencyField> parentFieldSyntax)
+        //{
+        //    var leafName = GetLeafIdentifierName(memberDeclarationSyntax);
+
+        //    //throw new NotSupportedException();
+
+        //    var parentNode = parentFieldSyntax;
+        //    leafName = GetLeafIdentifierName(parentFieldSyntax.Data.Field) + "_" + leafName;
+
+        //    while (!parentNode.IsRoot)
+        //    {
+        //        leafName = GetLeafIdentifierName(parentFieldSyntax.Data.Field) + "_" + leafName;
+        //        parentNode = parentNode.Parent;
+        //    }
+
+        //    return leafName;
+        //}
+
+        //private static string GetLeafIdentifierName(MemberDeclarationSyntax memberDeclarationSyntax)
+        //{
+        //    var propertyDeclarationSyntax = memberDeclarationSyntax as PropertyDeclarationSyntax;
+        //    if (propertyDeclarationSyntax != null)
+        //    {
+        //        {
+        //            return propertyDeclarationSyntax.Identifier.Text;
+        //        }
+        //    }
+
+        //    var methodDeclarationSyntax = memberDeclarationSyntax as MethodDeclarationSyntax;
+        //    if (methodDeclarationSyntax != null)
+        //    {
+        //        {
+        //            return methodDeclarationSyntax.Identifier.Text;
+        //        }
+        //    }
+
+        //    var fieldDeclarationSyntax = memberDeclarationSyntax as FieldDeclarationSyntax;
+        //    if (fieldDeclarationSyntax != null)
+        //    {
+        //        {
+        //            return fieldDeclarationSyntax.Declaration.Variables.First().Identifier.Text;
+        //        }
+        //    }
+
+        //    throw new NotSupportedException();
+        //}
 
         public static async Task<Document> ApplyConstuctorInjections(Document document, 
             SyntaxNode creation, 
