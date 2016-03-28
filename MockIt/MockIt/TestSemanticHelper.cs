@@ -181,6 +181,7 @@ namespace MockIt
                     Expression = x,
                     SymbolInfo = semanticModel.GetSymbolInfo(x.Type)
                 })
+                .Where(x => x.SymbolInfo.Symbol != null)
                 .Where(x => x.SymbolInfo.Symbol.Locations.Any(y => y.IsInSource && y.SourceTree != null))
                 .Select(x => new SutInfo
                 {
