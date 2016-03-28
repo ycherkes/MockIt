@@ -78,7 +78,7 @@ namespace MockIt
             if (!propertySymbol.IsWriteOnly && !x.Expression.IsLeftSideOfAssignExpression())
             {
                 var getExpression = f + ".#ToReplaceGet#(x => x." + propertySymbol.Name + ").Returns(default(" +
-                                    GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, propertySymbol.Type) + "))";
+                                    GetReplacedType(propertySymbol.Type, y.Substitutions, y.SutSubstitutions) + "))";
 
                 expressions.Add(getExpression);
             }
@@ -86,7 +86,7 @@ namespace MockIt
             if (propertySymbol.IsReadOnly || !x.Expression.IsLeftSideOfAssignExpression()) return expressions;
 
             var setExpression = f + ".#ToReplaceSet#(x => x." + propertySymbol.Name + " = default(" +
-                                GetSimpleTypeName(y.Substitutions, y.SutSubstitutions, propertySymbol.Type) + "))";
+                                GetReplacedType(propertySymbol.Type, y.Substitutions, y.SutSubstitutions) + "))";
 
             expressions.Add(setExpression);
 
@@ -94,19 +94,18 @@ namespace MockIt
         }
 
         private static string GetReplacedType(ITypeSymbol typeSymbol, Dictionary<string, ITypeSymbol> substitutions,
-            Dictionary<string, ITypeSymbol> sutSubstitutions)
+            IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
         {
             var type = GetSimpleTypeName(substitutions, sutSubstitutions, typeSymbol);
-            if (typeSymbol.ToDisplayString() != "void"
-                    && typeSymbol.IsAbstract
-                    && (typeSymbol as INamedTypeSymbol)?.IsGenericType == true)
-            {
-                var symbolDefinitionsReplacement = TestSemanticHelper.GetReplacedDefinitions(sutSubstitutions, typeSymbol);
 
-                if (symbolDefinitionsReplacement.Any())
-                {
-                    type = (symbolDefinitionsReplacement.FirstOrDefault(z => z.IsReplaced) ?? symbolDefinitionsReplacement.First()).Result;
-                }
+            if (typeSymbol.ToDisplayString() == "void" || (typeSymbol as INamedTypeSymbol)?.IsGenericType != true)
+                return type;
+
+            var symbolDefinitionsReplacement = TestSemanticHelper.GetReplacedDefinitions(sutSubstitutions, typeSymbol);
+
+            if (symbolDefinitionsReplacement.Any())
+            {
+                type = (symbolDefinitionsReplacement.FirstOrDefault(z => z.IsReplaced) ?? symbolDefinitionsReplacement.First()).Result;
             }
 
             return type;
