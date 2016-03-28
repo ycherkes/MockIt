@@ -25,56 +25,56 @@ namespace MockIt
 
             var sutSubstitutions = TestSemanticHelper.GetSubstitutions(refType);
 
-            var suitableSutSymbol = suitableSut.GetSuitableSutSymbol(symbol);
-            var sutFirstLocation = suitableSutSymbol.Locations.First();
-            var sutSemanticModel = TestSemanticHelper.GetSutSemanticModel(testSemanticModel, suitableSutSymbol, sutFirstLocation);
-
-            if (sutSemanticModel == null)
+            if (suitableSut.SemanticModel == null)
                 return new Fields[0];
 
+            var suitableSutSymbol = suitableSut.GetSuitableSutSymbol(symbol);
+            var sutFirstLocation = suitableSutSymbol.Locations.First();
             var node = sutFirstLocation.GetMemberNode();
 
-            var allNodes = node.DescendantNodesAndSelf().ToList();
+            var allNodes = node.DescendantNodesAndSelf().Where(x => !x.Span.IsEmpty).ToList();
 
             var allSyntax = new List<ExpressionSyntax>();
 
             var count = int.MaxValue;
+            var maxDepth = 3;
 
-            while (count != allSyntax.Count)
+            while (count != allSyntax.Count && maxDepth > 0)
             {
                 count = allSyntax.Count;
+                maxDepth--;
 
-                var methods = TestSemanticHelper.GetMethodsToConfigureMocks(allNodes);
-                var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(allNodes, methods, isLeftSideOfAssignExpression);
+                var methods = TestSemanticHelper.GetMethodsToConfigureMocks(allNodes).ToArray();
+                var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(allNodes, methods, isLeftSideOfAssignExpression).ToArray();
 
                 allSyntax.AddRange(methods.Concat(properties).Distinct());
                 allSyntax = allSyntax.Distinct().ToList();
 
-                allNodes = allSyntax.SelectMany(syn => syn.DescendantNodesAndSelf())
-                                    .SelectMany(x => GetReferencedNodes(x, sutSemanticModel))
+                allNodes = allSyntax.SelectMany(syn => syn.DescendantNodesAndSelf().Where(x => !x.Span.IsEmpty))
+                                    .SelectMany(x => GetReferencedNodes(x, suitableSut.SemanticModel))
                                     .ToList();
             }
 
             var invokedMethodsOfMocks = GetInvokedMethodsOfMocks(allSyntax,
-                                                                 sutSemanticModel,
+                                                                 suitableSut.SemanticModel,
                                                                  suitableSut,
                                                                  testSemanticModel,
                                                                  sutSubstitutions);
 
-            invokedMethodsOfMocks = invokedMethodsOfMocks.Where(DontHaveSetups(suitableSut, sutSubstitutions));
+            invokedMethodsOfMocks = invokedMethodsOfMocks.Where(DontHaveSetups(suitableSut));
 
             return invokedMethodsOfMocks;
         }
 
-        private static Func<Fields, bool> DontHaveSetups(SutInfo suitableSut, IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
+        private static Func<Fields, bool> DontHaveSetups(SutInfo suitableSut)
         {
-            return syntax => !IsExistInSetups(syntax, suitableSut.InjectedFields, sutSubstitutions);
+            return syntax => !IsExistInSetups(syntax, suitableSut.InjectedFields);
         }
 
-        private static bool IsExistInSetups(Fields fields, IEnumerable<TreeNode<DependencyField>> injectedFields, IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
+        private static bool IsExistInSetups(Fields fields, IEnumerable<TreeNode<DependencyField>> injectedFields)
         {
             return injectedFields.Any(x => x.FindTreeNodes(y => y.Parent != null
-                                                                && IsMemberEquals(fields.MethodOrPropertySymbol, sutSubstitutions, y.Data.SetupIdentifierNode?.Name)
+                                                                && IsMemberEquals(fields.MethodOrPropertySymbol, y.Data.SetupIdentifierNode?.Name)
                                                                 && fields.FieldsToSetup.Any(z => z.Field.Any(w => y.Parent.Data.Field.Declaration.Variables.Any(t => t.Identifier.Text == w)))).Any());
         }
 
@@ -88,7 +88,7 @@ namespace MockIt
             var symbol = symbolModel.GetSymbolInfo(node).Symbol;
 
 
-            if (symbol == null)
+            if (symbol == null || symbol.Locations.All(x => !x.IsInSource))
                 return new SyntaxNode[0];
 
             return symbol.DeclaringSyntaxReferences
@@ -141,25 +141,22 @@ namespace MockIt
             ISymbol symbol,
             IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
         {
-            return z => (z.Data.Field?.Declaration.Type as GenericNameSyntax)?.TypeArgumentList.Arguments.Any(y => IsCorrespondingType(semanticModel, y, symbol, sutSubstitutions, z)) ?? false;
+            return z => (z.Data.Field?.Declaration.Type as GenericNameSyntax)?.TypeArgumentList.Arguments.Any(y => IsCorrespondingType(semanticModel, y, symbol, sutSubstitutions)) ?? false;
         }
 
         private static bool IsCorrespondingType(SemanticModel semanticModel, 
             ExpressionSyntax y, 
             ISymbol x, 
-            IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions, 
-            TreeNode<DependencyField> treeNode)
+            IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
         {
             var symbol = semanticModel.GetSymbolInfo(y).Symbol;
 
-            return IsCorrespondingType(semanticModel, symbol, x, sutSubstitutions, treeNode);
+            return IsCorrespondingType(symbol, x, sutSubstitutions);
         }
 
-        private static bool IsCorrespondingType(SemanticModel semanticModel,
-            ISymbol symbol,
+        private static bool IsCorrespondingType(ISymbol symbol,
             ISymbol x,
-            IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions,
-            TreeNode<DependencyField> treeNode)
+            IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
         {
             var methodSymbol = x as IMethodSymbol;
             var propertySymbol = x as IPropertySymbol;
@@ -174,11 +171,11 @@ namespace MockIt
 
             return (symbol.GetSimpleTypeName() == ctName
                     || symbolDefinitionsReplacement.Select(z => z.Result).Contains(symbol.GetSimpleTypeName()))
-                   && !treeNode.FindChildTreeNodes(z => IsCorrespondingField(semanticModel, x, sutSubstitutions)(z)).Any()
-                   || (symbol as INamedTypeSymbol)?.AllInterfaces.Any(z => IsCorrespondingType(semanticModel, z, x, sutSubstitutions, treeNode)) == true;
+                   //&& !treeNode.FindChildTreeNodes(z => IsCorrespondingField(semanticModel, x, sutSubstitutions)(z)).Any()
+                   || (symbol as INamedTypeSymbol)?.AllInterfaces.Any(z => IsCorrespondingType(z, x, sutSubstitutions)) == true;
         }
 
-        private static bool IsMemberEquals(ISymbol methodOrPropertySymbol, IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions, SimpleNameSyntax name)
+        private static bool IsMemberEquals(ISymbol methodOrPropertySymbol, SimpleNameSyntax name)
         {
             return methodOrPropertySymbol.Name == name.Identifier.Text;
             // && ((methodOrPropertySymbol as ConstructedMethodSymbol)?.TypeArguments.Contains);

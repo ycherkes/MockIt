@@ -82,6 +82,7 @@ namespace MockIt
 
             var properties = node.DescendantNodes()
                                  .OfType<MemberAccessExpressionSyntax>()
+                                 .Where(x => !x.Span.IsEmpty)
                                  .Where(expr => !expr.DescendantNodes(methods.Contains).Any())
                                  .ToArray();
 
@@ -91,6 +92,7 @@ namespace MockIt
         public static ExpressionSyntax[] GetMethodsToConfigureMocks(IEnumerable<SyntaxNode> nodes)
         {
             var methods = nodes.SelectMany(x => x.DescendantNodes())
+                               .Where(x => !x.Span.IsEmpty)
                                .OfType<InvocationExpressionSyntax>()
                                .Select(expr => expr.Expression).ToArray();
 
@@ -174,19 +176,27 @@ namespace MockIt
         {
             var suts = testInitMethodDecl.DescendantNodes()
                 .OfType<ObjectCreationExpressionSyntax>()
+                .Select(x => new
+                {
+                    Expression = x,
+                    SymbolInfo = semanticModel.GetSymbolInfo(x.Type)
+                })
+                .Where(x => x.SymbolInfo.Symbol.Locations.Any(y => y.IsInSource && y.SourceTree != null))
                 .Select(x => new SutInfo
                 {
-                    SymbolInfo = semanticModel.GetSymbolInfo(x.Type),
+                    SymbolInfo = x.SymbolInfo,
+                    Identifier = x.Expression.Parent.DescendantNodes().OfType<IdentifierNameSyntax>().FirstOrDefault(),
+                    SemanticModel = GetSutSemanticModel(semanticModel, x.SymbolInfo.Symbol, x.SymbolInfo.Symbol.Locations.First()),
                     //excplicitly declared fields
-                    InjectedFields = declaredFields.Where(z => x.ArgumentList != null 
-                                                               && x.ArgumentList.Arguments.Any(y => IsSuitableDeclaredField(z, y)))
-                                                    .Select(y => new DependencyField
-                                                    {
-                                                        Field = y,
-                                                        IsInjectedFromConstructor = true
-                                                    })
-                                                    .Select(y => new TreeNode<DependencyField>(y))
-                                                   .ToArray()
+                    InjectedFields = declaredFields.Where(z => x.Expression.ArgumentList != null 
+                                                                       && x.Expression.ArgumentList.Arguments.Any(y => IsSuitableDeclaredField(z, y)))
+                                                            .Select(y => new DependencyField
+                                                            {
+                                                                Field = y,
+                                                                IsInjectedFromConstructor = true
+                                                            })
+                                                            .Select(y => new TreeNode<DependencyField>(y))
+                                                           .ToArray()
                 })
                 .Where(x => x.InjectedFields.Any())
                 .ToArray();

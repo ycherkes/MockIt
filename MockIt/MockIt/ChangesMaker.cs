@@ -112,24 +112,24 @@ namespace MockIt
             return type;
         }
 
-        private static string GetMethodName(IMethodSymbol methodSymbol, 
+        private static string GetMethodName(IMethodSymbol methodSymbol,
             IReadOnlyDictionary<string, ITypeSymbol> substitutions,
             IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
         {
-            if(!methodSymbol.IsGenericMethod)
+            if (!methodSymbol.IsGenericMethod)
                 return methodSymbol.Name;
 
             return methodSymbol.Name + "<" + Join(", ", 
-                                                    methodSymbol.TypeArguments.Any() 
+                                                    methodSymbol.TypeArguments.Any()
                                                         ? methodSymbol.TypeArguments.Select(x => GetSimpleTypeName(substitutions, sutSubstitutions, x))
                                                         //todo - determine is that necessary or could be removed
-                                                        : methodSymbol.TypeParameters.Select(x => GetSimpleTypeName(substitutions, sutSubstitutions, x))) 
+                                                        : methodSymbol.TypeParameters.Select(x => GetSimpleTypeName(substitutions, sutSubstitutions, x)))
                   + ">";
         }
 
         private static string GetSimpleTypeName(
-            IReadOnlyDictionary<string, ITypeSymbol> substitutions, 
-            IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions, 
+            IReadOnlyDictionary<string, ITypeSymbol> substitutions,
+            IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions,
             ITypeSymbol typeSymbol)
         {
             ITypeSymbol substitution;

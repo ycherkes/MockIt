@@ -70,6 +70,13 @@ namespace MockIt
             var declaredFields = testInitMethodDecl.Parent.ChildNodes().OfType<FieldDeclarationSyntax>().ToArray();
 
             var suts = testInitMethodDecl.GetSuts(testSemanticModel, declaredFields);
+            var sutIdentifiers = suts.Select(x => x.Identifier.Identifier.Text).ToArray();
+
+            memberAccessExpressions =
+                memberAccessExpressions.Where(
+                    x =>
+                        x.DescendantNodesAndSelf()
+                            .Any(y => sutIdentifiers.Contains((y as IdentifierNameSyntax)?.Identifier.Text))).ToArray();
 
             var mockableExpressions = memberAccessExpressions.Where(expressionSyntax => !IsNotExpressionNeedsToMock(MocksAnalyzingEngine.GetInvokedMethodsOfMock(expressionSyntax, testSemanticModel, suts)
                                                                                                                                  .SelectMany(x => x.FieldsToSetup
