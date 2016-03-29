@@ -37,4 +37,3 @@ Release History:
  v 1.0.0.19 Using statement support
  
 ![alt tag](https://raw.githubusercontent.com/ycherkes/MockIt/master/MockIto.gif)
-![alt tag](https://raw.githubusercontent.com/ycherkes/MockIt/master/MockItFactoriesCompressed.gif)
