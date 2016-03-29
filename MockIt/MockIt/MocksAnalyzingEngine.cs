@@ -128,8 +128,7 @@ namespace MockIt
             {
                 x.GetModelFromExpression(model)?.GetSymbolInfo(x).Symbol,
                 Expression = x
-            })
-                .SelectMany(x => new[] {new Fields
+            }).SelectMany(x => new[] {new Fields
                 {
                     Expression = x.Expression,
                     MethodOrPropertySymbol = x.Symbol,
@@ -161,12 +160,10 @@ namespace MockIt
 
             var disposeMethod = disposable.GetMembers("Dispose").First();
 
-            var suitableMember = containingType.FindImplementationForInterfaceMember(disposeMethod) ?? disposeMethod;
-
             return syntax.Declaration.Variables.Select(x => new Fields
             {
                 Expression = expression,
-                MethodOrPropertySymbol = suitableMember,
+                MethodOrPropertySymbol = disposeMethod,
                 FieldsToSetup = GetFieldsToSetup(suitableSut, semanticModel, containingType, sutSubstitutions)
             });
         }
