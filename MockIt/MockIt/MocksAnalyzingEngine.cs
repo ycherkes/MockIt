@@ -92,16 +92,16 @@ namespace MockIt
                 return new SyntaxNode[0];
 
             var sutType = sutInfo.SymbolInfo.Symbol as INamedTypeSymbol;
+            var symbolType = symbol as INamedTypeSymbol;
 
             //contstraint to get nodes for current sut type or base type of it
-            if (sutType != null
-                && !(Equals(symbol, sutType) 
-                     ||  symbol.ContainingType == sutType 
-                     || symbol.ContainingType?.ConstructedFrom == sutType.ConstructedFrom)
-                && !(Equals(symbol, sutType.BaseType) 
-                     || symbol.ContainingType == sutType.BaseType 
-                     || symbol.ContainingType?.ConstructedFrom == sutType.BaseType?.ConstructedFrom)
-                )
+            if (sutType != null 
+                && !IsTypesEquals(symbolType, sutType) 
+                && !IsTypesEquals(symbol.ContainingType, sutType) 
+                && !IsTypesEquals(symbol.ContainingType?.ConstructedFrom, sutType.ConstructedFrom) 
+                && !IsTypesEquals(symbolType, sutType.BaseType) 
+                && !IsTypesEquals(symbol.ContainingType, sutType.BaseType) 
+                && !IsTypesEquals(symbol.ContainingType?.ConstructedFrom, sutType.BaseType?.ConstructedFrom))
             {
                 return new SyntaxNode[0];
             }
@@ -109,6 +109,12 @@ namespace MockIt
             return symbol.DeclaringSyntaxReferences
                          .SelectMany(z => z.GetSyntax()
                          .DescendantNodes());
+        }
+
+        private static bool IsTypesEquals(INamedTypeSymbol type1, INamedTypeSymbol type2)
+        {
+            return type1?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ==
+                   type2?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         }
 
         private static IEnumerable<Fields> GetInvokedMethodsOfMocks(
@@ -126,7 +132,6 @@ namespace MockIt
                 .SelectMany(x => new[] {new Fields
                 {
                     Expression = x.Expression,
-                    //UsingStatement = ,
                     MethodOrPropertySymbol = x.Symbol,
                     FieldsToSetup = GetFieldsToSetup(suitableSut, semanticModel, x.Symbol, sutSubstitutions)
                 }}.Concat(GetUsings(x.Expression, x.Symbol, suitableSut, semanticModel, sutSubstitutions)))
@@ -137,9 +142,9 @@ namespace MockIt
 
         private static IEnumerable<Fields> GetUsings(ExpressionSyntax expression, ISymbol symbol, SutInfo suitableSut, SemanticModel semanticModel, Dictionary<string, ITypeSymbol> sutSubstitutions)
         {
-            var syntax = expression.Parents(x => x is UsingStatementSyntax) as UsingStatementSyntax;
+            var syntax = expression.Parents(x => (x as UsingStatementSyntax)?.Declaration.Variables.Any(y => y.DescendantNodes().Any(z => z == expression)) == true) as UsingStatementSyntax;
 
-            if (syntax == null || !syntax.Declaration.Variables.Any(x => x.DescendantNodes().Any(y => y == expression))) return Enumerable.Empty<Fields>();
+            if (syntax == null) return Enumerable.Empty<Fields>();
             
             var methodSymbol = symbol as IMethodSymbol;
             var propertySymbol = symbol as IPropertySymbol;
@@ -147,18 +152,22 @@ namespace MockIt
             if (methodSymbol == null && propertySymbol == null)
                 return Enumerable.Empty<Fields>();
 
-            var disposable = (methodSymbol?.ReturnType ?? propertySymbol.GetMethod?.ReturnType)?.Interfaces.FirstOrDefault(x => x.Name == "IDisposable");
+            var containingType = (methodSymbol?.ReturnType ?? propertySymbol.GetMethod?.ReturnType);
+
+            var disposable = containingType?.Interfaces.FirstOrDefault(x => x.Name == "IDisposable");
 
             if(disposable == null)
                 return Enumerable.Empty<Fields>();
 
             var disposeMethod = disposable.GetMembers("Dispose").First();
 
+            var suitableMember = containingType.FindImplementationForInterfaceMember(disposeMethod) ?? disposeMethod;
+
             return syntax.Declaration.Variables.Select(x => new Fields
             {
                 Expression = expression,
-                MethodOrPropertySymbol = disposeMethod,
-                FieldsToSetup = GetFieldsToSetup(suitableSut, semanticModel, disposeMethod, sutSubstitutions)
+                MethodOrPropertySymbol = suitableMember,
+                FieldsToSetup = GetFieldsToSetup(suitableSut, semanticModel, containingType, sutSubstitutions)
             });
         }
 
@@ -203,11 +212,12 @@ namespace MockIt
         {
             var methodSymbol = x as IMethodSymbol;
             var propertySymbol = x as IPropertySymbol;
+            var typeSymbol = x as INamedTypeSymbol;
 
-            if (methodSymbol == null && propertySymbol == null)
+            if (methodSymbol == null && propertySymbol == null && typeSymbol == null)
                 return false;
 
-            var ct = methodSymbol != null ? methodSymbol.ReceiverType : propertySymbol.ContainingType;
+            var ct = methodSymbol != null ? methodSymbol.ReceiverType : propertySymbol?.ContainingType ?? typeSymbol;
             var symbolDefinitionsReplacement = TestSemanticHelper.GetReplacedDefinitions(sutSubstitutions, ct);
 
             var ctName = ct.GetSimpleTypeName();
