@@ -23,7 +23,11 @@ namespace MockIt
 
             if (suitableSut == null) return new Fields[0];
 
-            var sutSubstitutions = TestSemanticHelper.GetSubstitutions(refType);
+            var sutSubstitutionsByInterface = TestSemanticHelper.GetSubstitutions(refType);
+            var sutSubstitutionsByConcreteType = TestSemanticHelper.GetSubstitutions(suitableSut.SymbolInfo.Symbol);
+            var sutSubstitutions = sutSubstitutionsByInterface.Concat(sutSubstitutionsByConcreteType)
+                                                              .DistinctBy(x => x.Key)
+                                                              .ToDictionary(x => x.Key, x => x.Value);
 
             if (suitableSut.SemanticModel == null)
                 return new Fields[0];
@@ -37,14 +41,9 @@ namespace MockIt
             var allSyntax = new List<ExpressionSyntax>();
 
             var count = int.MaxValue;
-            //var maxDepth = 3;
-
-            while (count != allSyntax.Count 
-                //&& maxDepth > 0
-                )
+            while (count != allSyntax.Count )
             {
                 count = allSyntax.Count;
-                //maxDepth--;
 
                 var methods = TestSemanticHelper.GetMethodsToConfigureMocks(allNodes).ToArray();
                 var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(allNodes, methods, isLeftSideOfAssignExpression).ToArray();
