@@ -123,15 +123,43 @@ namespace MockIt
                 x.GetModelFromExpression(model)?.GetSymbolInfo(x).Symbol,
                 Expression = x
             })
-                .Select(x => new Fields
+                .SelectMany(x => new[] {new Fields
                 {
                     Expression = x.Expression,
+                    //UsingStatement = ,
                     MethodOrPropertySymbol = x.Symbol,
                     FieldsToSetup = GetFieldsToSetup(suitableSut, semanticModel, x.Symbol, sutSubstitutions)
-                })
+                }}.Concat(GetUsings(x.Expression, x.Symbol, suitableSut, semanticModel, sutSubstitutions)))
                 .Where(x => x.FieldsToSetup.Any())
                 .ToArray();
             return invokedMethodsOfMocks;
+        }
+
+        private static IEnumerable<Fields> GetUsings(ExpressionSyntax expression, ISymbol symbol, SutInfo suitableSut, SemanticModel semanticModel, Dictionary<string, ITypeSymbol> sutSubstitutions)
+        {
+            var syntax = expression.Parents(x => x is UsingStatementSyntax) as UsingStatementSyntax;
+
+            if (syntax == null || !syntax.Declaration.Variables.Any(x => x.DescendantNodes().Any(y => y == expression))) return Enumerable.Empty<Fields>();
+            
+            var methodSymbol = symbol as IMethodSymbol;
+            var propertySymbol = symbol as IPropertySymbol;
+
+            if (methodSymbol == null && propertySymbol == null)
+                return Enumerable.Empty<Fields>();
+
+            var disposable = (methodSymbol?.ReturnType ?? propertySymbol.GetMethod?.ReturnType)?.Interfaces.FirstOrDefault(x => x.Name == "IDisposable");
+
+            if(disposable == null)
+                return Enumerable.Empty<Fields>();
+
+            var disposeMethod = disposable.GetMembers("Dispose").First();
+
+            return syntax.Declaration.Variables.Select(x => new Fields
+            {
+                Expression = expression,
+                MethodOrPropertySymbol = disposeMethod,
+                FieldsToSetup = GetFieldsToSetup(suitableSut, semanticModel, disposeMethod, sutSubstitutions)
+            });
         }
 
         private static IEnumerable<FieldsSetups> GetFieldsToSetup(SutInfo suitableSut, 
