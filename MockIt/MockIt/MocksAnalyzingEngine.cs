@@ -37,12 +37,14 @@ namespace MockIt
             var allSyntax = new List<ExpressionSyntax>();
 
             var count = int.MaxValue;
-            var maxDepth = 3;
+            //var maxDepth = 3;
 
-            while (count != allSyntax.Count && maxDepth > 0)
+            while (count != allSyntax.Count 
+                //&& maxDepth > 0
+                )
             {
                 count = allSyntax.Count;
-                maxDepth--;
+                //maxDepth--;
 
                 var methods = TestSemanticHelper.GetMethodsToConfigureMocks(allNodes).ToArray();
                 var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(allNodes, methods, isLeftSideOfAssignExpression).ToArray();
@@ -51,7 +53,7 @@ namespace MockIt
                 allSyntax = allSyntax.Distinct().ToList();
 
                 allNodes = allSyntax.SelectMany(syn => syn.DescendantNodesAndSelf().Where(x => !x.Span.IsEmpty))
-                                    .SelectMany(x => GetReferencedNodes(x, suitableSut.SemanticModel))
+                                    .SelectMany(x => GetReferencedNodes(x, suitableSut))
                                     .ToList();
             }
 
@@ -78,22 +80,36 @@ namespace MockIt
                                                                 && fields.FieldsToSetup.Any(z => z.Field.Any(w => y.Parent.Data.Field.Declaration.Variables.Any(t => t.Identifier.Text == w)))).Any());
         }
 
-        private static IEnumerable<SyntaxNode> GetReferencedNodes(SyntaxNode node, SemanticModel model)
+        private static IEnumerable<SyntaxNode> GetReferencedNodes(SyntaxNode node, SutInfo sutInfo)
         {
-            var symbolModel = node.GetModelFromNode(model.Compilation);
+            var symbolModel = node.GetModelFromNode(sutInfo.SemanticModel.Compilation);
 
             if (symbolModel == null)
                 return new SyntaxNode[0];
 
             var symbol = symbolModel.GetSymbolInfo(node).Symbol;
 
-
             if (symbol == null || symbol.Locations.All(x => !x.IsInSource))
                 return new SyntaxNode[0];
 
+            var sutType = sutInfo.SymbolInfo.Symbol as INamedTypeSymbol;
+
+            //contstraint to get nodes for current sut type or base type of it
+            if (sutType != null
+                && !(Equals(symbol, sutType) 
+                     ||  symbol.ContainingType == sutType 
+                     || symbol.ContainingType?.ConstructedFrom == sutType.ConstructedFrom)
+                && !(Equals(symbol, sutType.BaseType) 
+                     || symbol.ContainingType == sutType.BaseType 
+                     || symbol.ContainingType?.ConstructedFrom == sutType.BaseType?.ConstructedFrom)
+                )
+            {
+                return new SyntaxNode[0];
+            }
+
             return symbol.DeclaringSyntaxReferences
-                .SelectMany(z => z.GetSyntax()
-                    .DescendantNodes());
+                         .SelectMany(z => z.GetSyntax()
+                         .DescendantNodes());
         }
 
         private static IEnumerable<Fields> GetInvokedMethodsOfMocks(
