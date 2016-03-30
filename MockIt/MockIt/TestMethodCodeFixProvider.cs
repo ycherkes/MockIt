@@ -80,7 +80,7 @@ namespace MockIt
                 });
 
             var invokedMethodsOfMocks = memberAccessExpressions.SelectMany(expressionSyntax => MocksAnalyzingEngine.GetInvokedMethodsOfMock(expressionSyntax, testSemanticModel, suts))
-                                                               .DistinctBy(x => x.MethodOrPropertySymbol)
+                                                               .DistinctBy(x => string.Join(",", x.FieldsToSetup.SelectMany(y => y.Field.Select(z => z))) + "," + x.MethodOrPropertySymbol)
                                                                .ToArray();
 
             if (invokedMethodsOfMocks.Length == 0)

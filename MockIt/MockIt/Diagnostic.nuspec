@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
   <metadata>
     <id>MockIt</id>
-    <version>1.0.0.19</version>
+    <version>1.0.0.20</version>
     <title>MockIt</title>
     <authors>Yevhen Cherkes</authors>
     <owners>Yevhen Cherkes</owners>
