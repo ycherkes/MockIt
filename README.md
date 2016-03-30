@@ -37,3 +37,7 @@ Release History:
  v 1.0.0.19 Using statement support
  
 ![alt tag](https://raw.githubusercontent.com/ycherkes/MockIt/master/MockIto.gif)
+
+Sample for the factories mocking and using statement:
+
+![alt tag](https://raw.githubusercontent.com/ycherkes/MockIt/master/MockItFactories.gif)
