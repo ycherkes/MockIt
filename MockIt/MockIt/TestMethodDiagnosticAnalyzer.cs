@@ -56,8 +56,7 @@ namespace MockIt
             var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(methodDecls, methods);
 
             var memberAccessExpressions = methods.Concat(properties)
-                                     .DistinctBy(x => x.SpanStart)
-                                     .ToArray();
+                                                 .ToArray();
 
             if (!memberAccessExpressions.Any())
                 return;

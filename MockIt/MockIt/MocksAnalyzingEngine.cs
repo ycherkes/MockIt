@@ -25,7 +25,9 @@ namespace MockIt
 
             var sutSubstitutionsByInterface = TestSemanticHelper.GetSubstitutions(refType);
             var sutSubstitutionsByConcreteType = TestSemanticHelper.GetSubstitutions(suitableSut.SymbolInfo.Symbol);
+            var symbolSubstitutions = TestSemanticHelper.GetSubstitutions(symbol);
             var sutSubstitutions = sutSubstitutionsByInterface.Concat(sutSubstitutionsByConcreteType)
+                                                              .Concat(symbolSubstitutions)
                                                               .DistinctBy(x => x.Key)
                                                               .ToDictionary(x => x.Key, x => x.Value);
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
@@ -362,26 +363,38 @@ namespace MockIt
             return replacedDefinition;
         }
 
-        public static Dictionary<string, ITypeSymbol> GetSubstitutions(ISymbol symbol)
+        private static Tuple<ImmutableArray<ITypeParameterSymbol>, ImmutableArray<ITypeSymbol>> GetGenericInfo(ISymbol symbol)
         {
             var namedTypeSymbol = symbol as INamedTypeSymbol;
 
-            var emptyDictionary = new Dictionary<string, ITypeSymbol>();
+            if(namedTypeSymbol != null)
+                return new Tuple<ImmutableArray<ITypeParameterSymbol>, ImmutableArray<ITypeSymbol>>(namedTypeSymbol.TypeParameters, namedTypeSymbol.TypeArguments);
 
-            if (namedTypeSymbol == null) return emptyDictionary;
+            var methodSymbol = symbol as IMethodSymbol;
 
-            var typeParameters = namedTypeSymbol.TypeParameters;
-            var typeArguments = namedTypeSymbol.TypeArguments;
+            if (methodSymbol != null)
+                return new Tuple<ImmutableArray<ITypeParameterSymbol>, ImmutableArray<ITypeSymbol>>(methodSymbol.TypeParameters, methodSymbol.TypeArguments);
+
+            return new Tuple<ImmutableArray<ITypeParameterSymbol>, ImmutableArray<ITypeSymbol>>(ImmutableArray<ITypeParameterSymbol>.Empty, ImmutableArray<ITypeSymbol>.Empty);
+
+        }
+
+        public static Dictionary<string, ITypeSymbol> GetSubstitutions(ISymbol symbol)
+        {
+            var genericInfo = GetGenericInfo(symbol);
+
+            var typeParameters = genericInfo.Item1;
+            var typeArguments = genericInfo.Item2;
 
             if (typeParameters.Length == 0 || typeArguments.Length == 0)
-                return emptyDictionary;
+                return new Dictionary<string, ITypeSymbol>();
 
             var typeMap = typeParameters.Zip(typeArguments, (parameterSymbol, typeSymbol) => new
             {
                 Key = parameterSymbol,
                 Value = typeSymbol
             })
-                .ToDictionary(pair => pair.Key.ToString(), pair => pair.Value);
+            .ToDictionary(pair => pair.Key.ToString(), pair => pair.Value);
 
             return typeMap;
         }
