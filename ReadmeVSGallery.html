@@ -1,0 +1,28 @@
+<p>It helps you to automate mocks creating in your unit tests.</p>
+<p>Similar tasks can be solved by using&nbsp;Moq.AutoMocker but if you like to do it manually this tool helps you.</p>
+<p>How to use it:</p>
+<p>In the <strong>TestInitialize</strong> marked method create the instance of your Service under the test (sut).</p>
+<p>After that you can see code analysis error and the next suggestions (lightbulbs):</p>
+<ul>
+<li>to create a constructor without parameters </li>
+<li>to make mock </li>
+</ul>
+<p>&nbsp;Choose "<strong>Make mock</strong>" - it will create the mocks required for your service and put them into constructor.</p>
+<p>&nbsp;Create <strong>TestMethod </strong>marked method and write here a call of any methods of your sut.</p>
+<p>&nbsp;If sut's method uses any of injected instances Visual Studio shows your code analysis info.</p>
+<p>&nbsp;Choose "<strong>Make mock</strong>" - it will setup the mock's methods and calls VerifyAll for each of them.</p>
+<p>&nbsp;After that change all <strong>default(type)</strong> expressions to values you want.</p>
+<p>&nbsp;Using a hotkeys: <strong>F8</strong> (Go to nex error-warning-info) or <strong> F12 </strong>with Resharper -&gt; <strong>Ctrl + .</strong> (Show potential fixes - <span>Smart Tags</span>&nbsp; menu) or <strong>Alt + Enter</strong> with Resharper&nbsp;-&gt; <strong>m&nbsp;</strong>(select "Make mock" in the menu) -&gt; <strong>Enter</strong></p>
+<p>This extension is currently compiled for VS Pro. I didn't find how to publish here an extension with type 'tool' for VS Community Edition. But it's available for downloading on the Github:&nbsp;<a title="MockIt for Community Edition" href="https://github.com/ycherkes/MockIt/blob/master/MockIt.vsix">https://github.com/ycherkes/MockIt/blob/master/MockIt.vsix</a></p>
+<p>It's also available via NuGet&nbsp;<a href="https://www.nuget.org/packages/MockIt/">https://www.nuget.org/packages/MockIt/</a></p>
+<p><span style="font-size: 1.17em;">Release Notes</span></p>
+<p><span style="white-space: pre;">&nbsp;</span>Partial support the chains of mocks</p>
+<p>&nbsp;Using statement support</p>
+<p>&nbsp;Bugs fixing</p>
+<p><span style="font-size: 1.17em;">Plans</span></p>
+<p><span style="white-space: pre;">&nbsp;</span>Add support for&nbsp;xUnit</p>
+<p>&nbsp;Strict injected vars tracking (currently only by type of var)</p>
+<p>&nbsp;Add support for&nbsp;Moq.AutoMocker</p>
+<p><img id="198894" src="https://i1.visualstudiogallery.msdn.s-msft.com/713cf20e-e553-4bc9-ac02-477c750fad61/image/file/198894/1/mockito.gif" alt="" /></p>
+<p>Sample for the factories mocking and using statement:</p>
+<p><img id="206546" src="/site/view/file/206546/1/MockItFactories.gif" alt="" /></p>
