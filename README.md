@@ -32,16 +32,16 @@ It's also available via NuGet https://www.nuget.org/packages/MockIt/
  
 Release History:
 
- v 1.0.0.10 Fixed mocks detection when mocked classes/interfaces are declared in different assembly than sut
- v 1.0.0.17 Partial support the chains of mocks
- v 1.0.0.19 Using statement support
- v 1.0.0.21 Bugs fixing
+ * v 1.0.0.10 Fixed mocks detection when mocked classes/interfaces are declared in different assembly than sut
+ * v 1.0.0.17 Partial support the chains of mocks
+ * v 1.0.0.19 Using statement support
+ * v 1.0.0.21 Bugs fixing
 
 Plans:
 
- Add support for xUnit
- Strict injected vars tracking (currently only by type of var)
- Add support for Moq.AutoMocker
+ * Add support for xUnit
+ * Strict injected vars tracking (currently only by type of var)
+ * Add support for Moq.AutoMocker
  
 ![alt tag](https://raw.githubusercontent.com/ycherkes/MockIt/master/MockIto.gif)
 
