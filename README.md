@@ -40,6 +40,7 @@ Release History:
 Plans:
 
  * Add support for xUnit
+ * Add support for factories via delegates and Func<Tresult>
  * Strict injected vars tracking (currently only by type of var)
  * Add support for Moq.AutoMocker
  
