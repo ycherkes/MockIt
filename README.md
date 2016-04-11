@@ -36,7 +36,7 @@ Release History:
  * v 1.0.0.17 Partial support the chains of mocks
  * v 1.0.0.19 Using statement support
  * v 1.0.0.21 Bugs fixing
- * v 1.0.0.22 xUnit.Net added to supported test frameworks
+ * v 1.0.0.22 xUnit.Net added to supportable test frameworks
 
 Plans:
 
