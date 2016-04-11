@@ -278,6 +278,130 @@ namespace MockIt.Test
             VerifyCSharpFix(test, fixtest);
         }
 
+        [TestMethod]
+        public void TestCreateMockxUnit()
+        {
+            var test = @"
+            using Microsoft.VisualStudio.TestTools.UnitTesting;
+            using TestMockProjectTest;
+            
+            namespace TestMockUnitTests
+            {
+                public class UnitTest2
+                {
+                    private IService sut;
+            
+                    public UnitTest2()
+                    {
+                        sut = new Service();
+                    }
+            
+                    [Fact]
+                    public void TestMethod1()
+                    {
+                        sut.DoSomething(2);
+                    }
+                }
+            }
+            
+            namespace TestMockProjectTest
+            {
+            
+                public interface IService
+                {
+                    void DoSomething(int doInt);
+                }
+            
+                public interface ISubService
+                {
+                    void DoSubSomething(int doInt);
+                }
+            
+                public class Service : IService
+                {
+                    private readonly ISubService _subService;
+            
+                    public Service(ISubService subService)
+                    {
+                        _subService = subService;
+                    }
+            
+                    public void DoSomething(int doInt)
+                    {
+                        _subService.DoSubSomething(doInt);
+                    }
+                }
+            }";
+            var expected = new DiagnosticResult
+            {
+                Id = TestInitializeDiagnosticAnalyzer.DiagnosticId,
+                Message = $"Can be mocked",
+                Severity = DiagnosticSeverity.Info,
+                Locations =
+                    new[] {
+                            new DiagnosticResultLocation("Test0.cs", 13, 25)
+                        }
+            };
+
+            VerifyCSharpDiagnostic(test, expected);
+
+            var fixtest = @"
+            using Microsoft.VisualStudio.TestTools.UnitTesting;
+            using TestMockProjectTest;
+            
+            namespace TestMockUnitTests
+            {
+                public class UnitTest2
+                {
+                    private IService sut;
+        private Mock<ISubService> subServiceMock;
+
+        public UnitTest2()
+                    {
+            subServiceMock = new Mock<ISubService>();
+
+            sut = new Service(subServiceMock.Object);
+                    }
+            
+                    [Fact]
+                    public void TestMethod1()
+                    {
+                        sut.DoSomething(2);
+                    }
+                }
+            }
+            
+            namespace TestMockProjectTest
+            {
+            
+                public interface IService
+                {
+                    void DoSomething(int doInt);
+                }
+            
+                public interface ISubService
+                {
+                    void DoSubSomething(int doInt);
+                }
+            
+                public class Service : IService
+                {
+                    private readonly ISubService _subService;
+            
+                    public Service(ISubService subService)
+                    {
+                        _subService = subService;
+                    }
+            
+                    public void DoSomething(int doInt)
+                    {
+                        _subService.DoSubSomething(doInt);
+                    }
+                }
+            }";
+            VerifyCSharpFix(test, fixtest);
+        }
+
         protected override CodeFixProvider GetCSharpCodeFixProvider()
         {
             return new TestInitializeCodeFixProvider();

@@ -12,8 +12,33 @@ namespace MockIt
 {
     public static class TestSemanticHelper
     {
-        public static MethodDeclarationSyntax GetTestInitializeMethod(SemanticModel semanticModel)
+        private static readonly string[] s_xUnitMethodsAttributes;
+        private static readonly string[] s_testMethodsAttributes;
+
+        static TestSemanticHelper()
         {
+            s_xUnitMethodsAttributes = new [] { "Fact", "Theory" };
+            s_testMethodsAttributes = new[] { "Test", "TestMethod" }.Concat(s_xUnitMethodsAttributes)
+                                                                    .ToArray();
+        }
+
+        public static BaseMethodDeclarationSyntax GetTestInitializeMethod(SemanticModel semanticModel)
+        {
+            var xUnitTestMethod = GetMethodsWithAttributes(semanticModel, s_xUnitMethodsAttributes).FirstOrDefault();
+
+            if (xUnitTestMethod != null)
+            {
+                var classDeclSyntax = Parents(xUnitTestMethod, node => node is ClassDeclarationSyntax);
+
+                var constructors = classDeclSyntax?.ChildNodes()
+                                                   .Where(n => n.Kind() == SyntaxKind.ConstructorDeclaration)
+                                                   .OfType<ConstructorDeclarationSyntax>()
+                                                   .Where(x => x.Modifiers.All(y => y.Text != "static"))
+                                                   .ToArray();
+
+                return constructors?.FirstOrDefault();
+            }
+
             var methods = GetMethodsWithAttributes(semanticModel, "SetUp", "TestInitialize");
 
             return methods.FirstOrDefault();
@@ -26,7 +51,7 @@ namespace MockIt
 
         public static MethodDeclarationSyntax[] GetTestMethods(SemanticModel semanticModel)
         {
-            var methodDecls = GetMethodsWithAttributes(semanticModel, "Test", "TestMethod");
+            var methodDecls = GetMethodsWithAttributes(semanticModel, s_testMethodsAttributes);
 
             return methodDecls.ToArray();
         }
