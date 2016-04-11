@@ -36,10 +36,10 @@ Release History:
  * v 1.0.0.17 Partial support the chains of mocks
  * v 1.0.0.19 Using statement support
  * v 1.0.0.21 Bugs fixing
+ * v 1.0.0.22 xUnit.Net added to supported test frameworks
 
 Plans:
 
- * Add support for xUnit
  * Add support for factories via delegates and Func<Tresult>
  * Strict injected vars tracking (currently only by type of var)
  * Add support for Moq.AutoMocker
