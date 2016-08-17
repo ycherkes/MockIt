@@ -24,22 +24,21 @@ namespace MockIt
 
         public static BaseMethodDeclarationSyntax GetTestInitializeMethod(SemanticModel semanticModel)
         {
-            var xUnitTestMethod = GetMethodsWithAttributes(semanticModel, s_xUnitMethodsAttributes).FirstOrDefault();
+            var firstTestMethod = GetMethodsWithAttributes(semanticModel, s_testMethodsAttributes).FirstOrDefault();
+            var setupMethods = GetMethodsWithAttributes(semanticModel, "SetUp", "TestInitialize").Cast<BaseMethodDeclarationSyntax>().ToArray();
 
-            if (xUnitTestMethod != null)
-            {
-                var classDeclSyntax = Parents(xUnitTestMethod, node => node is ClassDeclarationSyntax);
+            if (firstTestMethod == null && !setupMethods.Any())
+                return null;
 
-                var constructors = classDeclSyntax?.ChildNodes()
-                                                   .Where(n => n.Kind() == SyntaxKind.ConstructorDeclaration)
-                                                   .OfType<ConstructorDeclarationSyntax>()
-                                                   .Where(x => x.Modifiers.All(y => y.Text != "static"))
-                                                   .ToArray();
+            var classDeclSyntax = Parents(firstTestMethod ?? setupMethods.First(), node => node is ClassDeclarationSyntax);
 
-                return constructors?.FirstOrDefault();
-            }
+            var constructors = classDeclSyntax?.ChildNodes()
+                                               .Where(n => n.Kind() == SyntaxKind.ConstructorDeclaration)
+                                               .OfType<ConstructorDeclarationSyntax>()
+                                               .Where(x => x.Modifiers.All(y => y.Text != "static"))
+                                               .ToArray() ?? Enumerable.Empty<ConstructorDeclarationSyntax>();
 
-            var methods = GetMethodsWithAttributes(semanticModel, "SetUp", "TestInitialize");
+            var methods = constructors.Concat(setupMethods);
 
             return methods.FirstOrDefault();
         }
@@ -58,15 +57,14 @@ namespace MockIt
 
         private static IEnumerable<MethodDeclarationSyntax> GetMethodsWithAttributes(SemanticModel semanticModel, params string[] attributes)
         {
-            var methodDecl = semanticModel
-                .SyntaxTree
-                .GetRoot()
-                .DescendantNodes()
-                .OfType<MethodDeclarationSyntax>()
-                .Where(x => x.AttributeLists
-                    .Any(y => y.Attributes
-                        .Any(z => z.Name is IdentifierNameSyntax && 
-                                  attributes.Contains(((IdentifierNameSyntax) z.Name).Identifier.Text))));
+            var methodDecl = semanticModel.SyntaxTree
+                                          .GetRoot()
+                                          .DescendantNodes()
+                                          .OfType<MethodDeclarationSyntax>()
+                                          .Where(x => x.AttributeLists
+                                                       .Any(y => y.Attributes
+                                                                  .Any(z => z.Name is IdentifierNameSyntax &&
+                                                                            attributes.Contains(((IdentifierNameSyntax) z.Name).Identifier.Text))));
 
             return methodDecl;
         }
@@ -170,8 +168,8 @@ namespace MockIt
             var compilation = sutCompilation.ContainsSyntaxTree(tree)
                                 ? sutCompilation
                                 : sutCompilation.ExternalReferences
-                                                 .OfType<CompilationReference>()
-                                                 .Select(x => x.Compilation).FirstOrDefault(c => c.ContainsSyntaxTree(tree));
+                                                .OfType<CompilationReference>()
+                                                .Select(x => x.Compilation).FirstOrDefault(c => c.ContainsSyntaxTree(tree));
 
             var model = compilation?.GetSemanticModel(tree);
 
@@ -215,7 +213,7 @@ namespace MockIt
                     Identifier = x.Expression.Parent.DescendantNodes().OfType<IdentifierNameSyntax>().FirstOrDefault(),
                     SemanticModel = GetSutSemanticModel(semanticModel, x.SymbolInfo.Symbol, x.SymbolInfo.Symbol.Locations.First()),
                     //excplicitly declared fields
-                    InjectedFields = declaredFields.Where(z => x.Expression.ArgumentList != null 
+                    InjectedFields = declaredFields.Where(z => x.Expression.ArgumentList != null
                                                                        && x.Expression.ArgumentList.Arguments.Any(y => IsSuitableDeclaredField(z, y)))
                                                             .Select(y => new DependencyField
                                                             {
@@ -280,55 +278,18 @@ namespace MockIt
             {
                 FillSetupsTree(nodeFromDependency, setupsInfos);
             }
-
-            //var fieldType = ((GenericNameSyntax)parentFieldSyntax.Data.Field.Declaration.Type).TypeArgumentList.Arguments.First();
-
-            //var fieldTree = fieldType.SyntaxTree;
-            //var fieldSemanticModel = GetModelFromSyntaxTree(fieldTree, semanticModel.Compilation);
-            //var symbolInfo = fieldSemanticModel.GetSymbolInfo(fieldType);
-
-            //var  symbol = symbolInfo.Symbol as INamedTypeSymbol;
-
-            //if (!(symbol?.IsAbstract ?? false))
-            //    return;
-
-            //var fieldTypeMembers = symbol.DeclaringSyntaxReferences
-            //    .SelectMany(x => x.GetSyntax().DescendantNodes())
-            //    .Where(
-            //        x =>
-            //            symbol.TypeKind == TypeKind.Interface ||
-            //            ((x as MethodDeclarationSyntax)?.Modifiers.Contains(
-            //                SyntaxFactory.Token(SyntaxKind.PublicKeyword)) ?? false)
-            //            ||
-            //            ((x as PropertyDeclarationSyntax)?.Modifiers.Contains(
-            //                SyntaxFactory.Token(SyntaxKind.PublicKeyword)) ?? false))
-            //    .OfType<MemberDeclarationSyntax>();
-
-            //var implicitDependencies = fieldTypeMembers.Distinct()
-            //                                           .ToList();
-
-            //var dependencies = ChangesMaker.MakeChainOfCallsInjections(implicitDependencies, parentFieldSyntax, semanticModel);
-
-            //foreach (var dependency in dependencies)
-            //{
-            //    var nodeFromDependency = parentFieldSyntax.AddChild(dependency);
-            //    FillSetupsTree(nodeFromDependency, semanticModel, testInitMethodDecl, setupsInfos);
-            //}
         }
 
         public static SutInfo GetSuitableSut(this INamedTypeSymbol refType, IEnumerable<SutInfo> suts)
         {
-            var suitableSut =
-                suts.FirstOrDefault(
-                    x =>
-                        x.SymbolInfo.Symbol is INamedTypeSymbol &&
-                        (((INamedTypeSymbol)x.SymbolInfo.Symbol).ToDisplayString() == refType.ToDisplayString() ||
-                        ((INamedTypeSymbol)x.SymbolInfo.Symbol).ConstructedFrom == refType) ||
-                        ((INamedTypeSymbol)x.SymbolInfo.Symbol).AllInterfaces.Any(
-                           y => y.ToDisplayString() == refType.ToDisplayString() || 
-                           y.ConstructedFrom == refType));
+            var suitableSut = suts.Where(x => x.SymbolInfo.Symbol is INamedTypeSymbol)
+                                  .Select(x => new { Symbol = (INamedTypeSymbol) x.SymbolInfo.Symbol, sut = x})
+                                  .FirstOrDefault(x => x.Symbol.ToDisplayString() == refType.ToDisplayString() ||
+                                                       x.Symbol.ConstructedFrom == refType ||
+                                                       x.Symbol.AllInterfaces.Any(y => y.ToDisplayString() == refType.ToDisplayString() ||
+                                                                                       y.ConstructedFrom == refType));
 
-            return suitableSut;
+            return suitableSut.sut;
         }
 
         public static SyntaxNode Parents(this SyntaxNode node, Func<SyntaxNode, bool> criteria)
@@ -338,7 +299,7 @@ namespace MockIt
                 if (criteria(node))
                     return node;
 
-                if (node.Parent == null)
+                if (node?.Parent == null)
                     return null;
 
                 node = node.Parent;

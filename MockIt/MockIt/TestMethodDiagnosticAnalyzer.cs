@@ -1,18 +1,18 @@
 #region License
 // Copyright (c) Yevhen Cherkes
-// 
-// Licensed under the Apache License, Version 2.0 (the "License"); 
-// you may not use this file except in compliance with the License. 
-// You may obtain a copy of the License at 
-// 
-// http://www.apache.org/licenses/LICENSE-2.0 
-// 
-// Unless required by applicable law or agreed to in writing, software 
-// distributed under the License is distributed on an "AS IS" BASIS, 
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
-// See the License for the specific language governing permissions and 
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
 // limitations under the License.
-// 
+//
 // The latest version of this file can be found at https://github.com/ycherkes/MockIt
 #endregion
 
@@ -31,7 +31,7 @@ namespace MockIt
     {
         public const string DiagnosticId = "MockItMethod";
         internal const string Category = "Usage";
-        
+
         internal static readonly LocalizableString Title = new LocalizableResourceString(nameof(Resources.AnalyzerTitle), Resources.ResourceManager, typeof (Resources));
 
         internal static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(Resources.AnalyzerMessageFormat), Resources.ResourceManager, typeof (Resources));
@@ -79,7 +79,7 @@ namespace MockIt
                                                                                                                                  .SelectMany(x => x.FieldsToSetup
                                                                                                                                                    .SelectMany(y => y.Field))
                                                                                                                                  .Distinct()
-                                                                                                                                 .ToArray(), 
+                                                                                                                                 .ToArray(),
                                                                                                                     expressionSyntax))
                                                                .ToArray();
 

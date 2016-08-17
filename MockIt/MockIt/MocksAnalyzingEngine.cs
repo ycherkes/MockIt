@@ -96,13 +96,13 @@ namespace MockIt
             var sutType = sutInfo.SymbolInfo.Symbol as INamedTypeSymbol;
             var symbolType = symbol as INamedTypeSymbol;
 
-            //contstraint to get nodes for current sut type or base type of it
-            if (sutType != null 
-                && !IsTypesEquals(symbolType, sutType) 
-                && !IsTypesEquals(symbol.ContainingType, sutType) 
-                && !IsTypesEquals(symbol.ContainingType?.ConstructedFrom, sutType.ConstructedFrom) 
-                && !IsTypesEquals(symbolType, sutType.BaseType) 
-                && !IsTypesEquals(symbol.ContainingType, sutType.BaseType) 
+            //constraint to get nodes for current sut type or base type of it
+            if (sutType != null
+                && !IsTypesEquals(symbolType, sutType)
+                && !IsTypesEquals(symbol.ContainingType, sutType)
+                && !IsTypesEquals(symbol.ContainingType?.ConstructedFrom, sutType.ConstructedFrom)
+                && !IsTypesEquals(symbolType, sutType.BaseType)
+                && !IsTypesEquals(symbol.ContainingType, sutType.BaseType)
                 && !IsTypesEquals(symbol.ContainingType?.ConstructedFrom, sutType.BaseType?.ConstructedFrom))
             {
                 return new SyntaxNode[0];
@@ -120,10 +120,10 @@ namespace MockIt
         }
 
         private static IEnumerable<Fields> GetInvokedMethodsOfMocks(
-            IEnumerable<ExpressionSyntax> methodsAndPropertyInvokations, 
-            SemanticModel model, 
+            IEnumerable<ExpressionSyntax> methodsAndPropertyInvokations,
+            SemanticModel model,
             SutInfo suitableSut,
-            SemanticModel semanticModel, 
+            SemanticModel semanticModel,
             Dictionary<string, ITypeSymbol> sutSubstitutions)
         {
             var invokedMethodsOfMocks = methodsAndPropertyInvokations.Select(x => new
@@ -143,17 +143,20 @@ namespace MockIt
 
         private static IEnumerable<Fields> GetUsings(ExpressionSyntax expression, ISymbol symbol, SutInfo suitableSut, SemanticModel semanticModel, Dictionary<string, ITypeSymbol> sutSubstitutions)
         {
-            var syntax = expression.Parents(x => (x as UsingStatementSyntax)?.Declaration.Variables.Any(y => y.DescendantNodes().Any(z => z == expression)) == true) as UsingStatementSyntax;
+            var syntax = expression.Parents(x => (x as UsingStatementSyntax)?.Declaration
+                                                                             .Variables
+                                                                             .Any(y => y.DescendantNodes()
+                                                                                        .Any(z => z == expression)) == true) as UsingStatementSyntax;
 
             if (syntax == null) return Enumerable.Empty<Fields>();
-            
+
             var methodSymbol = symbol as IMethodSymbol;
             var propertySymbol = symbol as IPropertySymbol;
 
             if (methodSymbol == null && propertySymbol == null)
                 return Enumerable.Empty<Fields>();
 
-            var containingType = (methodSymbol?.ReturnType ?? propertySymbol.GetMethod?.ReturnType);
+            var containingType = (methodSymbol?.ReturnType ?? propertySymbol?.GetMethod?.ReturnType);
 
             var disposable = containingType?.Interfaces.FirstOrDefault(x => x.Name == "IDisposable");
 
@@ -170,9 +173,9 @@ namespace MockIt
             });
         }
 
-        private static IEnumerable<FieldsSetups> GetFieldsToSetup(SutInfo suitableSut, 
-            SemanticModel semanticModel, 
-            ISymbol symbol, 
+        private static IEnumerable<FieldsSetups> GetFieldsToSetup(SutInfo suitableSut,
+            SemanticModel semanticModel,
+            ISymbol symbol,
             Dictionary<string, ITypeSymbol> sutSubstitutions)
         {
             return suitableSut.InjectedFields.Find(IsCorrespondingField(semanticModel, symbol, sutSubstitutions))
@@ -180,24 +183,26 @@ namespace MockIt
                 {
                     Field = z.Data.Field.Declaration.Variables.Select(f => f.Identifier.ValueText),
                     Substitutions = (z.Data.Field.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
-                        .Arguments
-                        .Select(y => GetSubstitutions(semanticModel, y))
-                        .SelectMany(s => s)
-                        .ToDictionary(s => s.Key, s => s.Value),
+                                                                                         .Arguments
+                                                                                         .Select(y => GetSubstitutions(semanticModel, y))
+                                                                                         .SelectMany(s => s)
+                                                                                         .ToDictionary(s => s.Key, s => s.Value),
                     SutSubstitutions = sutSubstitutions
                 }).ToArray();
         }
 
-        private static Func<TreeNode<DependencyField>, bool> IsCorrespondingField(SemanticModel semanticModel, 
+        private static Func<TreeNode<DependencyField>, bool> IsCorrespondingField(SemanticModel semanticModel,
             ISymbol symbol,
             IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
         {
-            return z => (z.Data.Field?.Declaration.Type as GenericNameSyntax)?.TypeArgumentList.Arguments.Any(y => IsCorrespondingType(semanticModel, y, symbol, sutSubstitutions)) ?? false;
+            return z => (z.Data.Field?.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
+                                                                              .Arguments
+                                                                              .Any(y => IsCorrespondingType(semanticModel, y, symbol, sutSubstitutions)) ?? false;
         }
 
-        private static bool IsCorrespondingType(SemanticModel semanticModel, 
-            ExpressionSyntax y, 
-            ISymbol x, 
+        private static bool IsCorrespondingType(SemanticModel semanticModel,
+            ExpressionSyntax y,
+            ISymbol x,
             IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
         {
             var symbol = semanticModel.GetSymbolInfo(y).Symbol;
@@ -221,16 +226,14 @@ namespace MockIt
 
             var ctName = ct.GetSimpleTypeName();
 
-            return (symbol.GetSimpleTypeName() == ctName
-                    || symbolDefinitionsReplacement.Select(z => z.Result).Contains(symbol.GetSimpleTypeName()))
-                   //&& !treeNode.FindChildTreeNodes(z => IsCorrespondingField(semanticModel, x, sutSubstitutions)(z)).Any()
+            return symbol.GetSimpleTypeName() == ctName
+                   || symbolDefinitionsReplacement.Select(z => z.Result).Contains(symbol.GetSimpleTypeName())
                    || (symbol as INamedTypeSymbol)?.AllInterfaces.Any(z => IsCorrespondingType(z, x, sutSubstitutions)) == true;
         }
 
         private static bool IsMemberEquals(ISymbol methodOrPropertySymbol, SimpleNameSyntax name)
         {
             return methodOrPropertySymbol.Name == name.Identifier.Text;
-            // && ((methodOrPropertySymbol as ConstructedMethodSymbol)?.TypeArguments.Contains);
         }
 
         private static Dictionary<string, ITypeSymbol> GetSubstitutions(SemanticModel semanticModel, ExpressionSyntax y)
