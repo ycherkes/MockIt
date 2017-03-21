@@ -38,7 +38,6 @@ namespace UnitTestProject1
         public void TestFactoryUsingMethod()
         {
             var res = _sut.FooFromFactory(new List<string>(), new Dictionary<int, string>());
-            factoryClassMock.VerifyAll();
         }
     }
 }
