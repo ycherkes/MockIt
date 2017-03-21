@@ -37,6 +37,7 @@ Release History:
  * v 1.0.0.19 Using statement support
  * v 1.0.0.21 Bugs fixing
  * v 1.0.0.22 xUnit.Net added to supportable test frameworks
+ * v 1.0.0.23 Visual Studio 2017 compatibility, bugs fixing
 
 Plans:
 

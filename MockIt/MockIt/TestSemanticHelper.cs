@@ -289,7 +289,7 @@ namespace MockIt
                                                        x.Symbol.AllInterfaces.Any(y => y.ToDisplayString() == refType.ToDisplayString() ||
                                                                                        y.ConstructedFrom == refType));
 
-            return suitableSut.sut;
+            return suitableSut?.sut;
         }
 
         public static SyntaxNode Parents(this SyntaxNode node, Func<SyntaxNode, bool> criteria)
