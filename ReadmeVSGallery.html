@@ -1,7 +1,6 @@
-<p>It helps you to automate mocks creating in your unit tests.</p>
-<p>Similar tasks can be solved by using&nbsp;Moq.AutoMocker but if you like to do it manually this tool helps you.</p>
+<p>A Visual Studio helper to create and configure mocks with&nbsp;<a href="https://www.nuget.org/packages/Moq/">Moq</a> lib in the unit tests (MSTest, NUnit, xUnit.Net).</p>
 <p>How to use it:</p>
-<p>In the <strong>TestInitialize</strong> marked method create the instance of your Service under the test (sut).</p>
+<p>In the <strong>TestInitialize, SetUp or ctor</strong>&nbsp;create the instance of your Service under the test (sut).</p>
 <p>After that you can see code analysis error and the next suggestions (lightbulbs):</p>
 <ul>
 <li>to create a constructor without parameters </li>
@@ -14,9 +13,16 @@
 <p>&nbsp;After that change all <strong>default(type)</strong> expressions to values you want.</p>
 <p>&nbsp;Using a hotkeys: <strong>F8</strong> (Go to nex error-warning-info) or <strong> F12 </strong>with Resharper -&gt; <strong>Ctrl + .</strong> (Show potential fixes - <span>Smart Tags</span>&nbsp; menu) or <strong>Alt + Enter</strong> with Resharper&nbsp;-&gt; <strong>m&nbsp;</strong>(select "Make mock" in the menu) -&gt; <strong>Enter</strong></p>
 <p><span style="font-size: 1.17em;">Release Notes</span></p>
-<p>&nbsp;xUnit.Net added to supportable test frameworks</p>
+<ul>
+<li>v 1.0.0.10 Fixed mocks detection when mocked classes/interfaces are declared in different assembly than sut</li>
+<li>v 1.0.0.17 Partial support the chains of mocks</li>
+<li>v 1.0.0.19 Using statement support</li>
+<li>v 1.0.0.21 Bugs fixing</li>
+<li>v 1.0.0.22 xUnit.Net added to supportable test frameworks</li>
+<li>v 1.0.0.23 Visual Studio 2017 compatibility, bugs fixing</li>
+</ul>
 <p><span style="font-size: 1.17em;">Plans</span></p>
-<p>&nbsp;Add support for factories via delegates and Func<Tresult> </p>
+<p>&nbsp;Add support for factories via delegates and Func</p>
 <p>&nbsp;Strict injected vars tracking (currently only by type of var)</p>
 <p>&nbsp;Add support for&nbsp;Moq.AutoMocker</p>
 <p><img id="198894" src="https://i1.visualstudiogallery.msdn.s-msft.com/713cf20e-e553-4bc9-ac02-477c750fad61/image/file/198894/1/mockito.gif" alt="" /></p>
