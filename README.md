@@ -1,5 +1,5 @@
 # MockIt
-A Visual Studio 2015 extension to automate the mocks creating and configuring in the unit tests
+A Visual Studio extension to automate the mocks creating and configuring in the unit tests
 
 It helps you to automate mocks creating in your unit tests.
 
