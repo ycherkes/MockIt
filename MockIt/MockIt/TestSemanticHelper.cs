@@ -26,11 +26,15 @@ namespace MockIt
         {
             var firstTestMethod = GetMethodsWithAttributes(semanticModel, s_testMethodsAttributes).FirstOrDefault();
             var setupMethods = GetMethodsWithAttributes(semanticModel, "SetUp", "TestInitialize").Cast<BaseMethodDeclarationSyntax>().ToArray();
+            var csu = semanticModel.SyntaxTree.GetRoot() as CompilationUnitSyntax;
+            var usings = csu?.Usings.FirstOrDefault(x => x.Name.ToFullString().Equals("Xunit", StringComparison.OrdinalIgnoreCase));
 
-            if (firstTestMethod == null && !setupMethods.Any())
+            if (firstTestMethod == null && !setupMethods.Any() && usings == null)
                 return null;
 
-            var classDeclSyntax = Parents(firstTestMethod ?? setupMethods.First(), node => node is ClassDeclarationSyntax);
+            var classDeclSyntax = firstTestMethod == null && !setupMethods.Any() 
+                                    ? csu?.DescendantNodes().OfType<ClassDeclarationSyntax>().FirstOrDefault() 
+                                    : Parents(firstTestMethod ?? setupMethods.First(), node => node is ClassDeclarationSyntax);
 
             var constructors = classDeclSyntax?.ChildNodes()
                                                .Where(n => n.Kind() == SyntaxKind.ConstructorDeclaration)
@@ -90,9 +94,7 @@ namespace MockIt
         public static IEnumerable<MemberAccessExpressionSyntax> GetPropertiesToConfigureMocks(SyntaxNode node,
             IEnumerable<ExpressionSyntax> methods, bool isLeftSideOfAssignExpression = false)
         {
-            var property = node as PropertyDeclarationSyntax;
-
-            if (property != null)
+            if (node is PropertyDeclarationSyntax property)
             {
                 var accessors = property.AccessorList.Accessors;
                 var getter = accessors.FirstOrDefault(ad => ad.Kind() == SyntaxKind.GetAccessorDeclaration);
