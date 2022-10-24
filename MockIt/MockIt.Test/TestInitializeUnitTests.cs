@@ -33,18 +33,18 @@ namespace MockIt.Test
                 [TestClass]
                 public class UnitTest2
                 {
-                    private IService sut;
+                    private IService _sut;
             
                     [TestInitialize]
                     public void Init()
                     {
-                        sut = new Service();
+                        _sut = new Service();
                     }
             
                     [TestMethod]
                     public void TestMethod1()
                     {
-                        sut.DoSomething(2);
+                        _sut.DoSomething(2);
                     }
                 }
             }
@@ -99,21 +99,21 @@ namespace MockIt.Test
                 [TestClass]
                 public class UnitTest2
                 {
-                    private IService sut;
-        private Mock<ISubService> subServiceMock;
+                    private IService _sut;
+        private Mock<ISubService> _subServiceMock;
 
         [TestInitialize]
                     public void Init()
                     {
-            subServiceMock = new Mock<ISubService>();
+            _subServiceMock = new Mock<ISubService>();
 
-            sut = new Service(subServiceMock.Object);
+            _sut = new Service(_subServiceMock.Object);
                     }
             
                     [TestMethod]
                     public void TestMethod1()
                     {
-                        sut.DoSomething(2);
+                        _sut.DoSomething(2);
                     }
                 }
             }

@@ -1,27 +1,28 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using MockIt.ThirdParty;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace MockIt
 {
-    public class MocksAnalyzingEngine
+    public static class MocksAnalyzingEngine
     {
-        public static IEnumerable<Fields> GetInvokedMethodsOfMock(ExpressionSyntax memberAccessExpresion, SemanticModel testSemanticModel, IEnumerable<SutInfo> suts)
+        public static async Task<IEnumerable<Fields>> GetInvokedMethodsOfMock(ExpressionSyntax memberAccessExpresion, SemanticModel testSemanticModel, IEnumerable<SutInfo> suts)
         {
             var isLeftSideOfAssignExpression = memberAccessExpresion.IsLeftSideOfAssignExpression();
             var symbol = testSemanticModel.GetSymbolInfo(memberAccessExpresion).Symbol;
 
-            if(symbol == null) return new Fields[0];
+            if (symbol == null) return Array.Empty<Fields>();
 
             var refType = symbol.ContainingType;
 
             var suitableSut = refType.GetSuitableSut(suts);
 
-            if (suitableSut == null) return new Fields[0];
+            if (suitableSut == null) return Array.Empty<Fields>();
 
             var sutSubstitutionsByInterface = TestSemanticHelper.GetSubstitutions(refType);
             var sutSubstitutionsByConcreteType = TestSemanticHelper.GetSubstitutions(suitableSut.SymbolInfo.Symbol);
@@ -32,18 +33,18 @@ namespace MockIt
                                                               .ToDictionary(x => x.Key, x => x.Value);
 
             if (suitableSut.SemanticModel == null)
-                return new Fields[0];
+                return Array.Empty<Fields>();
 
             var suitableSutSymbol = suitableSut.GetSuitableSutSymbol(symbol);
             var sutFirstLocation = suitableSutSymbol.Locations.First();
-            var node = sutFirstLocation.GetMemberNode();
+            var node = await sutFirstLocation.GetMemberNode();
 
             var allNodes = node.DescendantNodesAndSelf().Where(x => !x.Span.IsEmpty).ToList();
 
             var allSyntax = new List<ExpressionSyntax>();
 
             var count = int.MaxValue;
-            while (count != allSyntax.Count )
+            while (count != allSyntax.Count)
             {
                 count = allSyntax.Count;
 
@@ -86,18 +87,17 @@ namespace MockIt
             var symbolModel = node.GetModelFromNode(sutInfo.SemanticModel.Compilation);
 
             if (symbolModel == null)
-                return new SyntaxNode[0];
+                return Array.Empty<SyntaxNode>();
 
             var symbol = symbolModel.GetSymbolInfo(node).Symbol;
 
             if (symbol == null || symbol.Locations.All(x => !x.IsInSource))
-                return new SyntaxNode[0];
+                return Array.Empty<SyntaxNode>();
 
-            var sutType = sutInfo.SymbolInfo.Symbol as INamedTypeSymbol;
             var symbolType = symbol as INamedTypeSymbol;
 
             //constraint to get nodes for current sut type or base type of it
-            if (sutType != null
+            if (sutInfo.SymbolInfo.Symbol is INamedTypeSymbol sutType
                 && !IsTypesEquals(symbolType, sutType)
                 && !IsTypesEquals(symbol.ContainingType, sutType)
                 && !IsTypesEquals(symbol.ContainingType?.ConstructedFrom, sutType.ConstructedFrom)
@@ -105,7 +105,7 @@ namespace MockIt
                 && !IsTypesEquals(symbol.ContainingType, sutType.BaseType)
                 && !IsTypesEquals(symbol.ContainingType?.ConstructedFrom, sutType.BaseType?.ConstructedFrom))
             {
-                return new SyntaxNode[0];
+                return Array.Empty<SyntaxNode>();
             }
 
             return symbol.DeclaringSyntaxReferences
@@ -156,11 +156,11 @@ namespace MockIt
             if (methodSymbol == null && propertySymbol == null)
                 return Enumerable.Empty<Fields>();
 
-            var containingType = (methodSymbol?.ReturnType ?? propertySymbol?.GetMethod?.ReturnType);
+            var containingType = methodSymbol?.ReturnType ?? propertySymbol?.GetMethod?.ReturnType;
 
             var disposable = containingType?.Interfaces.FirstOrDefault(x => x.Name == "IDisposable");
 
-            if(disposable == null)
+            if (disposable == null)
                 return Enumerable.Empty<Fields>();
 
             var disposeMethod = disposable.GetMembers("Dispose").First();

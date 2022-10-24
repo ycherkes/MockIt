@@ -1,12 +1,13 @@
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using MockIt.ThirdParty;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using MockIt.ThirdParty;
+using System.Threading.Tasks;
 
 namespace MockIt
 {
@@ -17,7 +18,7 @@ namespace MockIt
 
         static TestSemanticHelper()
         {
-            s_xUnitMethodsAttributes = new [] { "Fact", "Theory" };
+            s_xUnitMethodsAttributes = new[] { "Fact", "Theory" };
             s_testMethodsAttributes = new[] { "Test", "TestMethod" }.Concat(s_xUnitMethodsAttributes)
                                                                     .ToArray();
         }
@@ -32,12 +33,12 @@ namespace MockIt
             if (firstTestMethod == null && !setupMethods.Any() && usings == null)
                 return null;
 
-            var classDeclSyntax = firstTestMethod == null && !setupMethods.Any() 
-                                    ? csu?.DescendantNodes().OfType<ClassDeclarationSyntax>().FirstOrDefault() 
+            var classDeclSyntax = firstTestMethod == null && !setupMethods.Any()
+                                    ? csu?.DescendantNodes().OfType<ClassDeclarationSyntax>().FirstOrDefault()
                                     : Parents(firstTestMethod ?? setupMethods.First(), node => node is ClassDeclarationSyntax);
 
             var constructors = classDeclSyntax?.ChildNodes()
-                                               .Where(n => n.Kind() == SyntaxKind.ConstructorDeclaration)
+                                               .Where(n => n.IsKind(SyntaxKind.ConstructorDeclaration))
                                                .OfType<ConstructorDeclarationSyntax>()
                                                .Where(x => x.Modifiers.All(y => y.Text != "static"))
                                                .ToArray() ?? Enumerable.Empty<ConstructorDeclarationSyntax>();
@@ -45,11 +46,6 @@ namespace MockIt
             var methods = constructors.Concat(setupMethods);
 
             return methods.FirstOrDefault();
-        }
-
-        public static SemanticModel GetModelFromNode(this SyntaxNode node, IEnumerable<SemanticModel> semanticModels)
-        {
-            return semanticModels.FirstOrDefault(x => x.SyntaxTree == node.SyntaxTree);
         }
 
         public static MethodDeclarationSyntax[] GetTestMethods(SemanticModel semanticModel)
@@ -67,8 +63,8 @@ namespace MockIt
                                           .OfType<MethodDeclarationSyntax>()
                                           .Where(x => x.AttributeLists
                                                        .Any(y => y.Attributes
-                                                                  .Any(z => z.Name is IdentifierNameSyntax &&
-                                                                            attributes.Contains(((IdentifierNameSyntax) z.Name).Identifier.Text))));
+                                                                  .Any(z => z.Name is IdentifierNameSyntax syntax &&
+                                                                            attributes.Contains(syntax.Identifier.Text))));
 
             return methodDecl;
         }
@@ -91,14 +87,14 @@ namespace MockIt
             return properties;
         }
 
-        public static IEnumerable<MemberAccessExpressionSyntax> GetPropertiesToConfigureMocks(SyntaxNode node,
+        private static IEnumerable<MemberAccessExpressionSyntax> GetPropertiesToConfigureMocks(SyntaxNode node,
             IEnumerable<ExpressionSyntax> methods, bool isLeftSideOfAssignExpression = false)
         {
             if (node is PropertyDeclarationSyntax property)
             {
                 var accessors = property.AccessorList.Accessors;
-                var getter = accessors.FirstOrDefault(ad => ad.Kind() == SyntaxKind.GetAccessorDeclaration);
-                var setter = accessors.FirstOrDefault(ad => ad.Kind() == SyntaxKind.SetAccessorDeclaration);
+                var getter = accessors.FirstOrDefault(ad => ad.IsKind(SyntaxKind.GetAccessorDeclaration));
+                var setter = accessors.FirstOrDefault(ad => ad.IsKind(SyntaxKind.SetAccessorDeclaration));
 
                 node = isLeftSideOfAssignExpression ? setter : getter;
 
@@ -130,7 +126,7 @@ namespace MockIt
             return type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
         }
 
-        public static Compilation GetCompilation(this SemanticModel semanticModel, ISymbol suitableSutMember)
+        private static Compilation GetCompilation(this SemanticModel semanticModel, ISymbol suitableSutMember)
         {
             var compilation = IsAssembliesEqual(suitableSutMember, semanticModel)
                 ? semanticModel.Compilation
@@ -139,7 +135,7 @@ namespace MockIt
             return compilation;
         }
 
-        public static Compilation GetExternalCompilation(this Compilation compilation, ISymbol suitableSutMember)
+        private static Compilation GetExternalCompilation(this Compilation compilation, ISymbol suitableSutMember)
         {
             return compilation.ExternalReferences
                               .OfType<CompilationReference>()
@@ -147,10 +143,10 @@ namespace MockIt
                               .FirstOrDefault(x => IsAssembliesEqual(x.Assembly, suitableSutMember.ContainingSymbol.ContainingAssembly));
         }
 
-        public static MemberDeclarationSyntax GetMemberNode(this Location location)
+        public static async Task<MemberDeclarationSyntax> GetMemberNode(this Location location)
         {
             var sourceTree = location.SourceTree;
-            var treeRoot = sourceTree.GetRoot();
+            var treeRoot = await sourceTree.GetRootAsync();
             var position = location.SourceSpan.Start;
             var parentNode = treeRoot.FindToken(position).Parent;
             var node = parentNode.FirstAncestorOrSelf<MethodDeclarationSyntax>() as MemberDeclarationSyntax
@@ -162,10 +158,9 @@ namespace MockIt
         public static SemanticModel GetModelFromNode(this SyntaxNode node, Compilation sutCompilation)
         {
             return node.SyntaxTree.GetModelFromSyntaxTree(sutCompilation);
-
         }
 
-        public static SemanticModel GetModelFromSyntaxTree(this SyntaxTree tree, Compilation sutCompilation)
+        private static SemanticModel GetModelFromSyntaxTree(this SyntaxTree tree, Compilation sutCompilation)
         {
             var compilation = sutCompilation.ContainsSyntaxTree(tree)
                                 ? sutCompilation
@@ -179,7 +174,7 @@ namespace MockIt
 
         }
 
-        public static SemanticModel GetSutSemanticModel(SemanticModel testSemanticModel, ISymbol suitableSutSymbol, Location sutFirstLocation)
+        private static SemanticModel GetSutSemanticModel(SemanticModel testSemanticModel, ISymbol suitableSutSymbol, Location sutFirstLocation)
         {
             var compilation = testSemanticModel.GetCompilation(suitableSutSymbol);
             var sutSemanticModel = compilation?.GetSemanticModel(sutFirstLocation.SourceTree);
@@ -244,7 +239,7 @@ namespace MockIt
 
         private static IReadOnlyCollection<SetupsInfo> GetTestInitSetups(SyntaxNode testInitMethodDecl, IReadOnlyCollection<FieldDeclarationSyntax> declaredFields)
         {
-            var result =  testInitMethodDecl.DescendantNodes()
+            var result = testInitMethodDecl.DescendantNodes()
                 .OfType<ExpressionStatementSyntax>()
                 .Select(x => new
                 {
@@ -285,11 +280,11 @@ namespace MockIt
         public static SutInfo GetSuitableSut(this INamedTypeSymbol refType, IEnumerable<SutInfo> suts)
         {
             var suitableSut = suts.Where(x => x.SymbolInfo.Symbol is INamedTypeSymbol)
-                                  .Select(x => new { Symbol = (INamedTypeSymbol) x.SymbolInfo.Symbol, sut = x})
+                                  .Select(x => new { Symbol = (INamedTypeSymbol)x.SymbolInfo.Symbol, sut = x })
                                   .FirstOrDefault(x => x.Symbol.ToDisplayString() == refType.ToDisplayString() ||
-                                                       x.Symbol.ConstructedFrom == refType ||
+                                                       x.Symbol.ConstructedFrom.Equals(refType, SymbolEqualityComparer.Default) ||
                                                        x.Symbol.AllInterfaces.Any(y => y.ToDisplayString() == refType.ToDisplayString() ||
-                                                                                       y.ConstructedFrom == refType));
+                                                                                       y.ConstructedFrom.Equals(refType, SymbolEqualityComparer.Default)));
 
             return suitableSut?.sut;
         }
@@ -345,7 +340,7 @@ namespace MockIt
             var originalType = GetSimpleTypeName(typeSymbol);
 
             var replacedDefinition = replacements.Select(s => s.Aggregate(originalType, (sum, repl) => sum.Replace(repl.Original, repl.Replacement)))
-                                                 .Select(x => new ReplacementInfo { IsReplaced = x != originalType, Result = x})
+                                                 .Select(x => new ReplacementInfo { IsReplaced = x != originalType, Result = x })
                                                  .ToArray();
 
             return replacedDefinition;
@@ -355,7 +350,7 @@ namespace MockIt
         {
             var namedTypeSymbol = symbol as INamedTypeSymbol;
 
-            if(namedTypeSymbol != null)
+            if (namedTypeSymbol != null)
                 return new Tuple<ImmutableArray<ITypeParameterSymbol>, ImmutableArray<ITypeSymbol>>(namedTypeSymbol.TypeParameters, namedTypeSymbol.TypeArguments);
 
             var methodSymbol = symbol as IMethodSymbol;

@@ -166,20 +166,20 @@ namespace MockIt.Test
                 [TestClass]
                 public class UnitTest2
                 {
-                    private IService sut;
-                    private Mock<ISubService> subServiceMock;
+                    private IService _sut;
+                    private Mock<ISubService> _subServiceMock;
 
         [TestInitialize]
                     public void Init()
                     {
-            subServiceMock = new Mock<ISubService>();
-            sut = new Service(subServiceMock.Object);
+            _subServiceMock = new Mock<ISubService>();
+            _sut = new Service(_subServiceMock.Object);
                     }
             
                     [TestMethod]
                     public void TestMethod1()
                     {
-                        sut.DoSomething(2);
+                        _sut.DoSomething(2);
                     }
                 }
             }
@@ -194,7 +194,7 @@ namespace MockIt.Test
             
                 public interface ISubService
                 {
-                    bool DoSubSomething(int doInt);
+                    Task<bool> DoSubSomething(int doInt);
                 }
             
                 public class Service : IService
@@ -222,23 +222,23 @@ namespace MockIt.Test
                 [TestClass]
                 public class UnitTest2
                 {
-                    private IService sut;
-                    private Mock<ISubService> subServiceMock;
+                    private IService _sut;
+                    private Mock<ISubService> _subServiceMock;
 
         [TestInitialize]
                     public void Init()
                     {
-            subServiceMock = new Mock<ISubService>();
-            sut = new Service(subServiceMock.Object);
+            _subServiceMock = new Mock<ISubService>();
+            _sut = new Service(_subServiceMock.Object);
                     }
             
                     [TestMethod]
                     public void TestMethod1()
                     {
-            subServiceMock.Setup(x => x.DoSubSomething(It.Is<int>(doInt => doInt == default(int)))).Returns(default(bool));
+            _subServiceMock.Setup(x => x.DoSubSomething(It.IsAny<int>())).Callback<int>(doInt => {}).ReturnsAsync(default(bool));
 
-            sut.DoSomething(2);
-            subServiceMock.VerifyAll();
+            _sut.DoSomething(2);
+            _subServiceMock.VerifyAll();
         }
                 }
             }
@@ -253,7 +253,7 @@ namespace MockIt.Test
             
                 public interface ISubService
                 {
-                    bool DoSubSomething(int doInt);
+                    Task<bool> DoSubSomething(int doInt);
                 }
             
                 public class Service : IService

@@ -16,16 +16,16 @@
 // The latest version of this file can be found at https://github.com/ycherkes/MockIt
 #endregion
 
-using System.Collections.Immutable;
-using System.Composition;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Collections.Immutable;
+using System.Composition;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace MockIt
 {
@@ -81,7 +81,7 @@ namespace MockIt
 
             var changes = constructorParameters.MakeConstructorInjections();
 
-            var changedDocument = await ChangesMaker.ApplyConstuctorInjections(document, creation, cancellationToken, changes, creationExpressionSyntax);
+            var changedDocument = await ChangesMaker.ApplyConstructorInjections(document, creation, cancellationToken, changes, creationExpressionSyntax);
             return changedDocument;
         }
     }

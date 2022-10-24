@@ -16,16 +16,16 @@
 // The latest version of this file can be found at https://github.com/ycherkes/MockIt
 #endregion
 
-using System.Collections.Immutable;
-using System.Composition;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
+using System.Collections.Immutable;
+using System.Composition;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace MockIt
 {
@@ -50,15 +50,16 @@ namespace MockIt
                              .Parent
                              .AncestorsAndSelf();
 
-            var invokation = tokens.FirstOrDefault(x => x is ExpressionStatementSyntax || x is LocalDeclarationStatementSyntax);
+            var invocation = tokens.FirstOrDefault(x => x is ExpressionStatementSyntax || x is LocalDeclarationStatementSyntax);
 
-            if (invokation == null) return;
+            if (invocation == null) return;
 
-            context.RegisterCodeFix(CodeAction.Create("Make mock", c => MakeMock(context.Document, invokation, c), "MockItTool"), diagnostic);
+            context.RegisterCodeFix(CodeAction.Create("Make mock with callbacks", c => MakeMock(context.Document, invocation, c, true), "MockItTool-7353a10c-1be6-4916-bd45-1063dec8778a"), diagnostic);
+            context.RegisterCodeFix(CodeAction.Create("Make mock", c => MakeMock(context.Document, invocation, c, false), "MockItTool-c006008d-86e4-4383-8c87-27b4b06c6196"), diagnostic);
         }
 
-        private static async Task<Document> MakeMock(Document document, SyntaxNode invokationSyntax,
-            CancellationToken cancellationToken)
+        private static async Task<Document> MakeMock(Document document, SyntaxNode invocationSyntax,
+            CancellationToken cancellationToken, bool withCallBack)
         {
             var testSemanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
 
@@ -68,27 +69,28 @@ namespace MockIt
 
             var suts = testInitMethodDecl.GetSuts(testSemanticModel, declaredFields);
 
-            var memberAccessExpressions = invokationSyntax.DescendantNodes()
+            var memberAccessExpressions = invocationSyntax.DescendantNodes()
                 .OfType<ExpressionSyntax>()
                 .Where(x => x is InvocationExpressionSyntax || x is MemberAccessExpressionSyntax)
                 .Select(expr =>
                 {
                     var memberAccess = expr as MemberAccessExpressionSyntax;
-                    var invokationExpression = expr as InvocationExpressionSyntax;
-                    var expression = invokationExpression == null ? memberAccess : invokationExpression.Expression;
+                    var expression = !(expr is InvocationExpressionSyntax invokationExpression) ? memberAccess : invokationExpression.Expression;
                     return expression;
                 });
 
-            var invokedMethodsOfMocks = memberAccessExpressions.SelectMany(expressionSyntax => MocksAnalyzingEngine.GetInvokedMethodsOfMock(expressionSyntax, testSemanticModel, suts))
-                                                               .DistinctBy(x => string.Join(",", x.FieldsToSetup.SelectMany(y => y.Field.Select(z => z))) + "," + x.MethodOrPropertySymbol)
-                                                               .ToArray();
+            var invokedMethodsOfMocks = await Task.WhenAll(memberAccessExpressions.Select(expressionSyntax => MocksAnalyzingEngine.GetInvokedMethodsOfMock(expressionSyntax, testSemanticModel, suts)));
 
-            if (invokedMethodsOfMocks.Length == 0)
+            var invokedMethodsOfMocksDistinct = invokedMethodsOfMocks.SelectMany(x => x)
+                                                                .DistinctBy(x => string.Join(",", x.FieldsToSetup.SelectMany(y => y.Field.Select(z => z))) + "," + x.MethodOrPropertySymbol)
+                                                                .ToArray();
+
+            if (invokedMethodsOfMocksDistinct.Length == 0)
                 return document;
 
             var editor = await DocumentEditor.CreateAsync(document, cancellationToken).ConfigureAwait(false);
 
-            ChangesMaker.ApplyChanges(invokationSyntax, editor, invokedMethodsOfMocks);
+            ChangesMaker.ApplyChanges(invocationSyntax, editor, invokedMethodsOfMocksDistinct, withCallBack);
 
             return editor.GetChangedDocument();
         }

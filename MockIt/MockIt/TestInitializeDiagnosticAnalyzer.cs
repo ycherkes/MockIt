@@ -15,12 +15,12 @@
 // 
 // The latest version of this file can be found at https://github.com/ycherkes/MockIt
 #endregion
-using System.Collections.Immutable;
-using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using System.Collections.Immutable;
+using System.Linq;
 
 namespace MockIt
 {
@@ -30,11 +30,11 @@ namespace MockIt
         public const string DiagnosticId = "MockItInitializer";
         internal const string Category = "Usage";
         // You can change these strings in the Resources.resx file. If you do not want your analyzer to be localize-able, you can use regular strings for Title and MessageFormat.
-        internal static readonly LocalizableString Title = new LocalizableResourceString(nameof(Resources.AnalyzerTitle), Resources.ResourceManager, typeof (Resources));
+        internal static readonly LocalizableString Title = new LocalizableResourceString(nameof(Resources.AnalyzerTitle), Resources.ResourceManager, typeof(Resources));
 
-        internal static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(Resources.AnalyzerMessageFormat), Resources.ResourceManager, typeof (Resources));
+        internal static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(Resources.AnalyzerMessageFormat), Resources.ResourceManager, typeof(Resources));
 
-        internal static readonly LocalizableString Description = new LocalizableResourceString(nameof(Resources.AnalyzerDescription), Resources.ResourceManager, typeof (Resources));
+        internal static readonly LocalizableString Description = new LocalizableResourceString(nameof(Resources.AnalyzerDescription), Resources.ResourceManager, typeof(Resources));
 
         internal static DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Info, true, Description);
 
@@ -42,30 +42,36 @@ namespace MockIt
 
         public override void Initialize(AnalysisContext context)
         {
+            context.EnableConcurrentExecution();
+            context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.Analyze | GeneratedCodeAnalysisFlags.ReportDiagnostics);
             context.RegisterSemanticModelAction(AnalyzeSemantic);
         }
 
         private static void AnalyzeSemantic(SemanticModelAnalysisContext semanticModel)
         {
-            var methodDecl = TestSemanticHelper.GetTestInitializeMethod(semanticModel.SemanticModel);
+            try
+            {
+                var methodDecl = TestSemanticHelper.GetTestInitializeMethod(semanticModel.SemanticModel);
 
-            var expression = methodDecl?.DescendantNodes()
-                                        .OfType<ObjectCreationExpressionSyntax>()
-                                        .FirstOrDefault(x => x.ArgumentList.Arguments.Count == 0);
+                var expression = methodDecl?.DescendantNodes()
+                                            .OfType<ObjectCreationExpressionSyntax>()
+                                            .FirstOrDefault(x => x.ArgumentList.Arguments.Count == 0);
 
-            if (expression == null)
-                return;
+                if (expression == null)
+                    return;
 
-            var symbolInfo = semanticModel.SemanticModel.GetSymbolInfo(expression);
+                var symbolInfo = semanticModel.SemanticModel.GetSymbolInfo(expression);
 
-            if (symbolInfo.CandidateReason != CandidateReason.OverloadResolutionFailure)
-                return;
+                if (symbolInfo.CandidateReason != CandidateReason.OverloadResolutionFailure)
+                    return;
 
-            var invokedSymbol = symbolInfo.CandidateSymbols.FirstOrDefault(x => x is IMethodSymbol 
-                                                                                /*&&((IMethodSymbol) x).Parameters.All(y => y.Type.IsAbstract)*/);
+                var invokedSymbol = symbolInfo.CandidateSymbols.FirstOrDefault(x => x is IMethodSymbol
+                                                                                    /*&&((IMethodSymbol) x).Parameters.All(y => y.Type.IsAbstract)*/);
 
-            if (invokedSymbol != null)
-                semanticModel.ReportDiagnostic(Diagnostic.Create(Rule, expression.Parent.GetLocation()));
+                if (invokedSymbol != null)
+                    semanticModel.ReportDiagnostic(Diagnostic.Create(Rule, expression.Parent.GetLocation()));
+            }
+            catch { }
         }
     }
 }
