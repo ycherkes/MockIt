@@ -12,7 +12,7 @@ namespace MockIt
             return items.GroupBy(property).Select(x => x.First());
         }
 
-        public static IEnumerable<TreeNode<T>> Find<T>(this IEnumerable<TreeNode<T>> items, Func<TreeNode<T>, bool> predicate)
+        public static IEnumerable<TreeNode<T>> Find<T>(this IEnumerable<TreeNode<T>> items, Func<TreeNode<T>, bool> predicate) where T : IEquatable<T>
         {
             var result = Enumerable.Empty<TreeNode<T>>();
 

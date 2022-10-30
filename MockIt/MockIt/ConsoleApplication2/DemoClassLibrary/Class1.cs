@@ -1,7 +1,6 @@
 ﻿using System;
 
-
-namespace ConsoleApplication2
+namespace DemoClassLibrary
 {
     public class Class1<T, T1> : IClass1<T, T1>
     {
@@ -14,7 +13,7 @@ namespace ConsoleApplication2
             _class2 = class2;
             _class3 = class3;
             _factoryClass = factoryClass;
-        }        
+        }
 
         public Tuple<T, T1> PropertyFoo
         {

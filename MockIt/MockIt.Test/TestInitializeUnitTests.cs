@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MockIt.Test.Helpers;
-using CodeFixVerifier = MockIt.Test.Verifiers.CodeFixVerifier;
+using MockIt.Test.Verifiers;
 
 namespace MockIt.Test
 {
@@ -80,7 +80,7 @@ namespace MockIt.Test
             var expected = new DiagnosticResult
             {
                 Id = TestInitializeDiagnosticAnalyzer.DiagnosticId,
-                Message = $"Can be mocked",
+                Message = "Can be mocked",
                 Severity = DiagnosticSeverity.Info,
                 Locations =
                     new[] {
@@ -209,7 +209,7 @@ namespace MockIt.Test
             var expected = new DiagnosticResult
             {
                 Id = TestInitializeDiagnosticAnalyzer.DiagnosticId,
-                Message = $"Can be mocked",
+                Message = "Can be mocked",
                 Severity = DiagnosticSeverity.Info,
                 Locations =
                     new[] {
@@ -335,7 +335,7 @@ namespace MockIt.Test
             var expected = new DiagnosticResult
             {
                 Id = TestInitializeDiagnosticAnalyzer.DiagnosticId,
-                Message = $"Can be mocked",
+                Message = "Can be mocked",
                 Severity = DiagnosticSeverity.Info,
                 Locations =
                     new[] {

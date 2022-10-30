@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ConsoleApplication2
+namespace DemoClassLibrary
 {
     public interface IClass1<T, T1>
     {

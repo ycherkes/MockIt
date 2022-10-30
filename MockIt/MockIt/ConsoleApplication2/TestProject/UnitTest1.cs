@@ -1,39 +1,36 @@
-﻿using DemoClassLibrary;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Collections.Generic;
+using DemoClassLibrary;
+using Xunit;
 
-namespace UnitTestProject1
+namespace TestProject
 {
-    [TestClass]
     public class UnitTest1
     {
         private Class1<List<string>, Dictionary<int, string>> _sut;
 
-        [TestInitialize]
-        public void Init()
+        public UnitTest1()
         {
             _sut = new Class1<List<string>, Dictionary<int, string>>();
         }
 
-        [TestMethod]
+        [Fact]
         public void TestMethod()
         {
             var prop = _sut.PropertyFoo;
         }
 
-        [TestMethod]
+        [Fact]
         public void TestProp()
         {
             var res = _sut.Foo(new List<string>(), new Dictionary<int, string>());
         }
 
-        [TestMethod]
+        [Fact]
         public void TestParameterizedGenericMethod()
         {
             var res = _sut.Foo(long.MaxValue, new List<string>());
         }
 
-        [TestMethod]
+        [Fact]
         public void TestFactoryUsingMethod()
         {
             var res = _sut.FooFromFactory(new List<string>(), new Dictionary<int, string>());

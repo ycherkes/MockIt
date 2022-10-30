@@ -1,7 +1,7 @@
-using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using MockIt.ThirdParty;
+using System.Collections.Generic;
 
 namespace MockIt
 {

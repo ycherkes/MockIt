@@ -123,7 +123,7 @@ namespace MockIt
 
         public static string GetSimpleTypeName(this ISymbol type)
         {
-            return type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+            return (type as INamedTypeSymbol)?.IsAnonymousType == true ? "object" : type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
         }
 
         private static Compilation GetCompilation(this SemanticModel semanticModel, ISymbol suitableSutMember)
@@ -231,7 +231,7 @@ namespace MockIt
 
             foreach (var field in allInjectedFields)
             {
-                FillSetupsTree(field, implicitDependencies);
+                FillSetupsTree(field, field, implicitDependencies);
             }
 
             return suts;
@@ -259,7 +259,7 @@ namespace MockIt
             return result;
         }
 
-        private static void FillSetupsTree(TreeNode<DependencyField> parentFieldSyntax, IReadOnlyCollection<SetupsInfo> setupsInfos)
+        private static void FillSetupsTree(TreeNode<DependencyField> rootFieldSyntax, TreeNode<DependencyField> parentFieldSyntax, IReadOnlyCollection<SetupsInfo> setupsInfos)
         {
             var fieldSetups = setupsInfos.Where(x => x.ParentField == parentFieldSyntax.Data.Field).Select(x => new DependencyField
             {
@@ -269,11 +269,18 @@ namespace MockIt
                 SetupIdentifierNode = x.SetupIdentifierNode
             }).ToArray();
 
-            var addedSetups = fieldSetups.Select(parentFieldSyntax.AddChild);
+            var addedSetups = new List<TreeNode<DependencyField>>();
+
+            foreach (var setup in fieldSetups)
+            {
+                if (rootFieldSyntax.FindTreeNode(y => Equals(y.Data, setup)) != default) continue;
+
+                addedSetups.Add(parentFieldSyntax.AddChild(setup));
+            }
 
             foreach (var nodeFromDependency in addedSetups)
             {
-                FillSetupsTree(nodeFromDependency, setupsInfos);
+                FillSetupsTree(rootFieldSyntax, nodeFromDependency, setupsInfos);
             }
         }
 
