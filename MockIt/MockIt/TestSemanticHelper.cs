@@ -13,19 +13,19 @@ namespace MockIt
 {
     public static class TestSemanticHelper
     {
-        private static readonly string[] s_xUnitMethodsAttributes;
-        private static readonly string[] s_testMethodsAttributes;
+        private static readonly string[] XUnitMethodsAttributes;
+        private static readonly string[] TestMethodsAttributes;
 
         static TestSemanticHelper()
         {
-            s_xUnitMethodsAttributes = new[] { "Fact", "Theory" };
-            s_testMethodsAttributes = new[] { "Test", "TestMethod" }.Concat(s_xUnitMethodsAttributes)
+            XUnitMethodsAttributes = new[] { "Fact", "Theory" };
+            TestMethodsAttributes = new[] { "Test", "TestMethod" }.Concat(XUnitMethodsAttributes)
                                                                     .ToArray();
         }
 
         public static BaseMethodDeclarationSyntax GetTestInitializeMethod(SemanticModel semanticModel)
         {
-            var firstTestMethod = GetMethodsWithAttributes(semanticModel, s_testMethodsAttributes).FirstOrDefault();
+            var firstTestMethod = GetMethodsWithAttributes(semanticModel, TestMethodsAttributes).FirstOrDefault();
             var setupMethods = GetMethodsWithAttributes(semanticModel, "SetUp", "TestInitialize").Cast<BaseMethodDeclarationSyntax>().ToArray();
             var csu = semanticModel.SyntaxTree.GetRoot() as CompilationUnitSyntax;
             var usings = csu?.Usings.FirstOrDefault(x => x.Name.ToFullString().Equals("Xunit", StringComparison.OrdinalIgnoreCase));
@@ -50,9 +50,9 @@ namespace MockIt
 
         public static MethodDeclarationSyntax[] GetTestMethods(SemanticModel semanticModel)
         {
-            var methodDecls = GetMethodsWithAttributes(semanticModel, s_testMethodsAttributes);
+            var methodDeclarations = GetMethodsWithAttributes(semanticModel, TestMethodsAttributes);
 
-            return methodDecls.ToArray();
+            return methodDeclarations.ToArray();
         }
 
         private static IEnumerable<MethodDeclarationSyntax> GetMethodsWithAttributes(SemanticModel semanticModel, params string[] attributes)
@@ -92,14 +92,14 @@ namespace MockIt
         {
             if (node is PropertyDeclarationSyntax property)
             {
-                var accessors = property.AccessorList.Accessors;
-                var getter = accessors.FirstOrDefault(ad => ad.IsKind(SyntaxKind.GetAccessorDeclaration));
-                var setter = accessors.FirstOrDefault(ad => ad.IsKind(SyntaxKind.SetAccessorDeclaration));
+                var accessors = property.AccessorList?.Accessors;
+                var getter = accessors?.FirstOrDefault(ad => ad.IsKind(SyntaxKind.GetAccessorDeclaration));
+                var setter = accessors?.FirstOrDefault(ad => ad.IsKind(SyntaxKind.SetAccessorDeclaration));
 
                 node = isLeftSideOfAssignExpression ? setter : getter;
 
                 if (node == null)
-                    return Enumerable.Empty<MemberAccessExpressionSyntax>();
+                    return Array.Empty<MemberAccessExpressionSyntax>();
             }
 
             var properties = node.DescendantNodes()
@@ -128,7 +128,7 @@ namespace MockIt
 
         private static Compilation GetCompilation(this SemanticModel semanticModel, ISymbol suitableSutMember)
         {
-            var compilation = IsAssembliesEqual(suitableSutMember, semanticModel)
+            var compilation = IsAssemblyEqual(suitableSutMember, semanticModel)
                 ? semanticModel.Compilation
                 : GetExternalCompilation(semanticModel.Compilation, suitableSutMember);
 
@@ -140,17 +140,20 @@ namespace MockIt
             return compilation.ExternalReferences
                               .OfType<CompilationReference>()
                               .Select(x => x.Compilation)
-                              .FirstOrDefault(x => IsAssembliesEqual(x.Assembly, suitableSutMember.ContainingSymbol.ContainingAssembly));
+                              .FirstOrDefault(x => IsEqual(x.Assembly, suitableSutMember.ContainingSymbol.ContainingAssembly));
         }
 
         public static async Task<MemberDeclarationSyntax> GetMemberNode(this Location location)
         {
             var sourceTree = location.SourceTree;
+
+            if (sourceTree == null) return null;
+
             var treeRoot = await sourceTree.GetRootAsync();
             var position = location.SourceSpan.Start;
             var parentNode = treeRoot.FindToken(position).Parent;
-            var node = parentNode.FirstAncestorOrSelf<MethodDeclarationSyntax>() as MemberDeclarationSyntax
-                       ?? parentNode.FirstAncestorOrSelf<PropertyDeclarationSyntax>();
+            var node = parentNode?.FirstAncestorOrSelf<MethodDeclarationSyntax>() as MemberDeclarationSyntax
+                       ?? parentNode?.FirstAncestorOrSelf<PropertyDeclarationSyntax>();
 
             return node;
         }
@@ -166,7 +169,8 @@ namespace MockIt
                                 ? sutCompilation
                                 : sutCompilation.ExternalReferences
                                                 .OfType<CompilationReference>()
-                                                .Select(x => x.Compilation).FirstOrDefault(c => c.ContainsSyntaxTree(tree));
+                                                .Select(x => x.Compilation)
+                                                .FirstOrDefault(c => c.ContainsSyntaxTree(tree));
 
             var model = compilation?.GetSemanticModel(tree);
 
@@ -176,17 +180,18 @@ namespace MockIt
 
         private static SemanticModel GetSutSemanticModel(SemanticModel testSemanticModel, ISymbol suitableSutSymbol, Location sutFirstLocation)
         {
+            if (sutFirstLocation.SourceTree == null) return null;
             var compilation = testSemanticModel.GetCompilation(suitableSutSymbol);
             var sutSemanticModel = compilation?.GetSemanticModel(sutFirstLocation.SourceTree);
             return sutSemanticModel;
         }
 
-        private static bool IsAssembliesEqual(ISymbol sutSymbol, SemanticModel semanticModel)
+        private static bool IsAssemblyEqual(ISymbol sutSymbol, SemanticModel semanticModel)
         {
-            return IsAssembliesEqual(sutSymbol.ContainingSymbol.ContainingAssembly, semanticModel.Compilation.Assembly);
+            return IsEqual(sutSymbol.ContainingSymbol.ContainingAssembly, semanticModel.Compilation.Assembly);
         }
 
-        private static bool IsAssembliesEqual(IAssemblySymbol firstSymbol, IAssemblySymbol secondSymbol)
+        private static bool IsEqual(IAssemblySymbol firstSymbol, IAssemblySymbol secondSymbol)
         {
             return firstSymbol.Name == secondSymbol.Name;
         }
@@ -202,14 +207,13 @@ namespace MockIt
                     Expression = x,
                     SymbolInfo = semanticModel.GetSymbolInfo(x.Type)
                 })
-                .Where(x => x.SymbolInfo.Symbol != null)
-                .Where(x => x.SymbolInfo.Symbol.Locations.Any(y => y.IsInSource && y.SourceTree != null))
+                .Where(x => x.SymbolInfo.Symbol?.Locations.Any(y => y.IsInSource && y.SourceTree != null) == true)
                 .Select(x => new SutInfo
                 {
                     SymbolInfo = x.SymbolInfo,
-                    Identifier = x.Expression.Parent.DescendantNodes().OfType<IdentifierNameSyntax>().FirstOrDefault(),
-                    SemanticModel = GetSutSemanticModel(semanticModel, x.SymbolInfo.Symbol, x.SymbolInfo.Symbol.Locations.First()),
-                    //excplicitly declared fields
+                    Identifier = x.Expression.Parent?.DescendantNodes().OfType<IdentifierNameSyntax>().FirstOrDefault(),
+                    SemanticModel = GetSutSemanticModel(semanticModel, x.SymbolInfo.Symbol, x.SymbolInfo.Symbol?.Locations.First()),
+                    //explicitly declared fields
                     InjectedFields = declaredFields.Where(z => x.Expression.ArgumentList != null
                                                                        && x.Expression.ArgumentList.Arguments.Any(y => IsSuitableDeclaredField(z, y)))
                                                             .Select(y => new DependencyField
@@ -251,7 +255,7 @@ namespace MockIt
                 {
                     Expression = x.Expression,
                     ParentField = declaredFields.FirstOrDefault(y => y.Declaration.Variables.Any(z => z.Identifier.Text == x.Match.Groups[1].Value.Trim())),
-                    SetupIdentifierNode = x.Expression.DescendantNodes().OfType<MemberAccessExpressionSyntax>().FirstOrDefault(y => x.Match.Groups[4].Value.Trim() == y.Name.ToString() || x.Match.Groups[4].Value.Trim().StartsWith(y.Name.ToString() + "(")),
+                    SetupIdentifierNode = x.Expression.DescendantNodes().OfType<MemberAccessExpressionSyntax>().FirstOrDefault(y => x.Match.Groups[4].Value.Trim() == y.Name.ToString() || x.Match.Groups[4].Value.Trim().StartsWith(y.Name + "(")),
                     ReturnsField = declaredFields.FirstOrDefault(y => y.Declaration.Variables.Any(z => z.Identifier.Text == x.Match.Groups[7].Value.Trim())),
                 })
                 .ToArray();
@@ -312,8 +316,7 @@ namespace MockIt
 
         public static ISymbol GetSuitableSutSymbol(this SutInfo suitableSut, ISymbol memberSymbol)
         {
-            var suitableSutMember =
-                ((INamedTypeSymbol)suitableSut.SymbolInfo.Symbol).FindImplementationForInterfaceMember(memberSymbol);
+            var suitableSutMember = ((INamedTypeSymbol)suitableSut.SymbolInfo.Symbol)?.FindImplementationForInterfaceMember(memberSymbol);
 
 
             if (suitableSutMember != null) return suitableSutMember;
@@ -322,27 +325,39 @@ namespace MockIt
             var s1 = memberSymbol as IMethodSymbol;
 
             if (s1?.ConstructedFrom != null)
-                suitableSutMember =
-                    ((INamedTypeSymbol)suitableSut.SymbolInfo.Symbol).FindImplementationForInterfaceMember(
-                        s1.ConstructedFrom);
+                suitableSutMember = ((INamedTypeSymbol)suitableSut.SymbolInfo.Symbol)?.FindImplementationForInterfaceMember(s1.ConstructedFrom);
 
             return suitableSutMember ?? memberSymbol;
         }
 
         private static bool IsSuitableDeclaredField(BaseFieldDeclarationSyntax z, ArgumentSyntax y)
         {
-            return new[] { z.Declaration.Variables.FirstOrDefault()?.Identifier.Text + ".Object", z.Declaration.Variables.FirstOrDefault()?.Identifier.Text }.Contains(y.Expression.GetText().ToString().Trim());
+            var variableIdentifier = z.Declaration.Variables.FirstOrDefault()?.Identifier.Text;
+            return new[]
+            {
+                variableIdentifier + ".Object",
+                variableIdentifier
+            }
+            .Contains(y.Expression.GetText().ToString().Trim());
         }
 
+        /// <summary>
+        /// todo: replace string manipulations with syntax
+        /// </summary>
+        /// <param name="sutSubstitutions"></param>
+        /// <param name="typeSymbol"></param>
+        /// <returns></returns>
         public static IReadOnlyCollection<ReplacementInfo> GetReplacedDefinitions(IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions, ISymbol typeSymbol)
         {
-            var replacements = sutSubstitutions.Select(kv => new[]
-            {
-                new {Original = "<" + kv.Key + ">", Replacement = "<" + GetSimpleTypeName(kv.Value) + ">"},
-                new {Original = "<" + kv.Key + ",", Replacement = "<" + GetSimpleTypeName(kv.Value) + ","},
-                new {Original = ", " + kv.Key + ",", Replacement = ", " + GetSimpleTypeName(kv.Value) + ","},
-                new {Original = ", " + kv.Key + ">", Replacement = ", " + GetSimpleTypeName(kv.Value) + ">"}
-            });
+            var replacements = sutSubstitutions.Select(kv => new { Original = kv.Key, Substitution = GetSimpleTypeName(kv.Value) })
+                .Select(kv =>
+                    new[]
+                    {
+                        new {Original = "<" + kv.Original + ">", Replacement = "<" + kv.Substitution + ">"},
+                        new {Original = "<" + kv.Original + ",", Replacement = "<" + kv.Substitution +  ","},
+                        new {Original = ", " + kv.Original + ",", Replacement = ", " + kv.Substitution + ","},
+                        new {Original = ", " + kv.Original + ">", Replacement = ", " + kv.Substitution + ">"}
+                    });
 
             var originalType = GetSimpleTypeName(typeSymbol);
 
@@ -353,28 +368,21 @@ namespace MockIt
             return replacedDefinition;
         }
 
-        private static Tuple<ImmutableArray<ITypeParameterSymbol>, ImmutableArray<ITypeSymbol>> GetGenericInfo(ISymbol symbol)
+        private static (ImmutableArray<ITypeParameterSymbol> typeParameters, ImmutableArray<ITypeSymbol> typeArguments) GetGenericInfo(ISymbol symbol)
         {
-            var namedTypeSymbol = symbol as INamedTypeSymbol;
+            if (symbol is INamedTypeSymbol namedTypeSymbol)
+                return (namedTypeSymbol.TypeParameters, namedTypeSymbol.TypeArguments);
 
-            if (namedTypeSymbol != null)
-                return new Tuple<ImmutableArray<ITypeParameterSymbol>, ImmutableArray<ITypeSymbol>>(namedTypeSymbol.TypeParameters, namedTypeSymbol.TypeArguments);
+            if (symbol is IMethodSymbol methodSymbol)
+                return (methodSymbol.TypeParameters, methodSymbol.TypeArguments);
 
-            var methodSymbol = symbol as IMethodSymbol;
-
-            if (methodSymbol != null)
-                return new Tuple<ImmutableArray<ITypeParameterSymbol>, ImmutableArray<ITypeSymbol>>(methodSymbol.TypeParameters, methodSymbol.TypeArguments);
-
-            return new Tuple<ImmutableArray<ITypeParameterSymbol>, ImmutableArray<ITypeSymbol>>(ImmutableArray<ITypeParameterSymbol>.Empty, ImmutableArray<ITypeSymbol>.Empty);
+            return (ImmutableArray<ITypeParameterSymbol>.Empty, ImmutableArray<ITypeSymbol>.Empty);
 
         }
 
         public static Dictionary<string, ITypeSymbol> GetSubstitutions(ISymbol symbol)
         {
-            var genericInfo = GetGenericInfo(symbol);
-
-            var typeParameters = genericInfo.Item1;
-            var typeArguments = genericInfo.Item2;
+            var (typeParameters, typeArguments) = GetGenericInfo(symbol);
 
             if (typeParameters.Length == 0 || typeArguments.Length == 0)
                 return new Dictionary<string, ITypeSymbol>();
@@ -383,15 +391,14 @@ namespace MockIt
             {
                 Key = parameterSymbol,
                 Value = typeSymbol
-            })
-            .ToDictionary(pair => pair.Key.ToString(), pair => pair.Value);
+            }).ToDictionary(x => x.Key.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), x => x.Value);
 
             return typeMap;
         }
 
-        public static SemanticModel GetModelFromExpression(this ExpressionSyntax x, SemanticModel dependantModel)
+        public static SemanticModel GetModelFromExpression(this ExpressionSyntax x, SemanticModel dependentModel)
         {
-            return x.SyntaxTree.GetModelFromSyntaxTree(dependantModel.Compilation);
+            return x.SyntaxTree.GetModelFromSyntaxTree(dependentModel.Compilation);
         }
     }
 }

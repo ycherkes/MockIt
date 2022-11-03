@@ -75,7 +75,7 @@ namespace MockIt
                 .Select(expr =>
                 {
                     var memberAccess = expr as MemberAccessExpressionSyntax;
-                    var expression = !(expr is InvocationExpressionSyntax invokationExpression) ? memberAccess : invokationExpression.Expression;
+                    var expression = !(expr is InvocationExpressionSyntax invocationExpression) ? memberAccess : invocationExpression.Expression;
                     return expression;
                 });
 

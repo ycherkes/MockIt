@@ -9,10 +9,10 @@ namespace MockIt
         public static bool IsLeftSideOfAssignExpression(this SyntaxNode node)
         {
             return node.IsParentKind(SyntaxKind.SimpleAssignmentExpression) &&
-                ((AssignmentExpressionSyntax)node.Parent).Left == node;
+                ((AssignmentExpressionSyntax)node.Parent)?.Left == node;
         }
 
-        public static bool IsParentKind(this SyntaxNode node, SyntaxKind kind)
+        private static bool IsParentKind(this SyntaxNode node, SyntaxKind kind)
         {
             return node != null && node.Parent.IsKind(kind);
         }

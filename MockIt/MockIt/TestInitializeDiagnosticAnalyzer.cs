@@ -30,14 +30,14 @@ namespace MockIt
         public const string DiagnosticId = "MockItInitializer";
 
         private const string Category = "Usage";
-        // You can change these strings in the Resources.resx file. If you do not want your analyzer to be localize-able, you can use regular strings for Title and MessageFormat.
+
         private static readonly LocalizableString Title = new LocalizableResourceString(nameof(Resources.AnalyzerTitle), Resources.ResourceManager, typeof(Resources));
 
         private static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(Resources.AnalyzerMessageFormat), Resources.ResourceManager, typeof(Resources));
 
         private static readonly LocalizableString Description = new LocalizableResourceString(nameof(Resources.AnalyzerDescription), Resources.ResourceManager, typeof(Resources));
 
-        private static DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Info, true, Description);
+        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Info, true, Description);
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
@@ -56,9 +56,9 @@ namespace MockIt
 
                 var expression = methodDecl?.DescendantNodes()
                                             .OfType<ObjectCreationExpressionSyntax>()
-                                            .FirstOrDefault(x => x.ArgumentList.Arguments.Count == 0);
+                                            .FirstOrDefault(x => x.ArgumentList?.Arguments.Count == 0);
 
-                if (expression == null)
+                if (expression?.Parent == null)
                     return;
 
                 var symbolInfo = semanticModel.SemanticModel.GetSymbolInfo(expression);
