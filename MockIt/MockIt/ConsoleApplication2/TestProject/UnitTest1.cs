@@ -13,6 +13,12 @@ namespace TestProject
         }
 
         [Fact]
+        public void Foo()
+        {
+            var sut = new Class1<List<string>, Dictionary<int, string>>();
+        }
+
+        [Fact]
         public void TestMethod()
         {
             var prop = _sut.PropertyFoo;

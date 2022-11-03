@@ -6,7 +6,7 @@ namespace MockIt
     public class ConstructorInjections
     {
         public FieldDeclarationSyntax NewField { get; set; }
-        public ExpressionStatementSyntax NewExpression { get; set; }
+        public SyntaxNode NewExpression { get; set; }
         public SyntaxNodeOrToken CreationArgument { get; set; }
     }
 }

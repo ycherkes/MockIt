@@ -23,15 +23,16 @@ namespace MockIt
                                                                     .ToArray();
         }
 
-        public static BaseMethodDeclarationSyntax GetTestInitializeMethod(SemanticModel semanticModel)
+        public static SutCreationContext[] GetSutCreationContexts(SemanticModel semanticModel)
         {
-            var firstTestMethod = GetMethodsWithAttributes(semanticModel, TestMethodsAttributes).FirstOrDefault();
+            var testMethods = GetMethodsWithAttributes(semanticModel, TestMethodsAttributes)?.ToArray() ?? Array.Empty<MethodDeclarationSyntax>();
             var setupMethods = GetMethodsWithAttributes(semanticModel, "SetUp", "TestInitialize").Cast<BaseMethodDeclarationSyntax>().ToArray();
             var csu = semanticModel.SyntaxTree.GetRoot() as CompilationUnitSyntax;
             var usings = csu?.Usings.FirstOrDefault(x => x.Name.ToFullString().Equals("Xunit", StringComparison.OrdinalIgnoreCase));
+            var firstTestMethod = testMethods.FirstOrDefault();
 
             if (firstTestMethod == null && !setupMethods.Any() && usings == null)
-                return null;
+                return Array.Empty<SutCreationContext>();
 
             var classDeclSyntax = firstTestMethod == null && !setupMethods.Any()
                                     ? csu?.DescendantNodes().OfType<ClassDeclarationSyntax>().FirstOrDefault()
@@ -43,9 +44,23 @@ namespace MockIt
                                                .Where(x => x.Modifiers.All(y => y.Text != "static"))
                                                .ToArray() ?? Enumerable.Empty<ConstructorDeclarationSyntax>();
 
-            var methods = constructors.Concat(setupMethods);
+            return setupMethods.Select(x => new SutCreationContext
+            {
+                ContextType = SutCreationContextType.InitMethod,
+                MethodSyntax = x
+            }).Concat(constructors.Select(x => new SutCreationContext
+            {
+                ContextType = SutCreationContextType.Constructor,
+                MethodSyntax = x
+            })).Concat(testMethods.Select(x => new SutCreationContext
+            {
+                ContextType = SutCreationContextType.Method,
+                MethodSyntax = x
+            })).ToArray();
 
-            return methods.FirstOrDefault();
+            //var methods = constructors.Concat(setupMethods);
+
+            //return methods.FirstOrDefault();
         }
 
         public static MethodDeclarationSyntax[] GetTestMethods(SemanticModel semanticModel)

@@ -40,7 +40,7 @@ namespace MockIt
 
         private static readonly LocalizableString Description = new LocalizableResourceString(nameof(Resources.AnalyzerDescription), Resources.ResourceManager, typeof(Resources));
 
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Info, true, Description);
+        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description);
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
@@ -67,7 +67,7 @@ namespace MockIt
                 if (!memberAccessExpressions.Any())
                     return;
 
-                var testInitMethodDecl = TestSemanticHelper.GetTestInitializeMethod(testSemanticModel);
+                var testInitMethodDecl = TestSemanticHelper.GetSutCreationContexts(testSemanticModel).FirstOrDefault()?.MethodSyntax;
 
                 var declaredFields = testInitMethodDecl?.Parent?.ChildNodes().OfType<FieldDeclarationSyntax>().ToArray();
 

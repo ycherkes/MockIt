@@ -52,27 +52,38 @@ namespace MockIt
         {
             try
             {
-                var methodDecl = TestSemanticHelper.GetTestInitializeMethod(semanticModel.SemanticModel);
+                var sutContexts = TestSemanticHelper.GetSutCreationContexts(semanticModel.SemanticModel);
 
-                var expression = methodDecl?.DescendantNodes()
-                                            .OfType<ObjectCreationExpressionSyntax>()
-                                            .FirstOrDefault(x => x.ArgumentList?.Arguments.Count == 0);
+                var locations = sutContexts.Select(x => new { location = GetDiagnosticLocation(semanticModel, x), x.ContextType })
+                    .Where(x => x.location != null);
 
-                if (expression?.Parent == null)
-                    return;
-
-                var symbolInfo = semanticModel.SemanticModel.GetSymbolInfo(expression);
-
-                if (symbolInfo.CandidateReason != CandidateReason.OverloadResolutionFailure)
-                    return;
-
-                var invokedSymbol = symbolInfo.CandidateSymbols.FirstOrDefault(x => x is IMethodSymbol
-                                                                                    /*&&((IMethodSymbol) x).Parameters.All(y => y.Type.IsAbstract)*/);
-
-                if (invokedSymbol != null)
-                    semanticModel.ReportDiagnostic(Diagnostic.Create(Rule, expression.Parent.GetLocation()));
+                foreach (var location in locations)
+                {
+                    var props = ImmutableDictionary<string, string>.Empty.Add("ContextType", location.ContextType.ToString());
+                    semanticModel.ReportDiagnostic(Diagnostic.Create(Rule, location.location, props));
+                }
             }
             catch { }
+        }
+
+        private static Location GetDiagnosticLocation(SemanticModelAnalysisContext semanticModel,
+            SutCreationContext context)
+        {
+            var expression = context.MethodSyntax?.DescendantNodes()
+                .OfType<ObjectCreationExpressionSyntax>()
+                .FirstOrDefault(x => x.ArgumentList?.Arguments.Count == 0);
+
+            if (expression?.Parent == null)
+                return null;
+
+            var symbolInfo = semanticModel.SemanticModel.GetSymbolInfo(expression);
+
+            if (symbolInfo.CandidateReason != CandidateReason.OverloadResolutionFailure)
+                return null;
+
+            var invokedSymbol = symbolInfo.CandidateSymbols.OfType<IMethodSymbol>().FirstOrDefault( /*&&((IMethodSymbol) x).Parameters.All(y => y.Type.IsAbstract)*/);
+
+            return invokedSymbol == null ? null : expression.Parent.GetLocation();
         }
     }
 }

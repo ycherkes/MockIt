@@ -63,7 +63,7 @@ namespace MockIt
         {
             var testSemanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
 
-            var testInitMethodDecl = TestSemanticHelper.GetTestInitializeMethod(testSemanticModel);
+            var testInitMethodDecl = TestSemanticHelper.GetSutCreationContexts(testSemanticModel).FirstOrDefault()?.MethodSyntax;
 
             var declaredFields = testInitMethodDecl.Parent?.ChildNodes().OfType<FieldDeclarationSyntax>().ToArray();
 
