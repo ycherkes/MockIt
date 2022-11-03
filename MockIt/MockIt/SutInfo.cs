@@ -12,7 +12,5 @@ namespace MockIt
         public IReadOnlyCollection<TreeNode<DependencyField>> InjectedFields { get; set; }
         public SemanticModel SemanticModel { get; set; }
         public IdentifierNameSyntax Identifier { get; set; }
-
-        //public SyntaxNode[] Nodes { get; set; }
     }
 }

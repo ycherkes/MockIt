@@ -244,8 +244,10 @@ namespace MockIt
 
             var ctName = ct.GetSimpleTypeName();
 
-            return symbol.GetSimpleTypeName() == ctName
-                   || symbolDefinitionsReplacement.Select(z => z.Result).Contains(symbol.GetSimpleTypeName())
+            var symbolTypeName = symbol.GetSimpleTypeName();
+
+            return symbolTypeName == ctName
+                   || symbolDefinitionsReplacement.Select(z => z.Result).Contains(symbolTypeName)
                    || (symbol as INamedTypeSymbol)?.AllInterfaces.Any(z => IsSuitableType(z, x, sutSubstitutions)) == true;
         }
 

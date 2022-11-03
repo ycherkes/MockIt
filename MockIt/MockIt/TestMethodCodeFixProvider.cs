@@ -85,8 +85,8 @@ namespace MockIt
             var invokedMethodsOfMocks = await Task.WhenAll(memberAccessExpressions.Select(expressionSyntax => MocksAnalyzingEngine.GetInvokedMethodsOfMock(expressionSyntax, testSemanticModel, suts)));
 
             var invokedMethodsOfMocksDistinct = invokedMethodsOfMocks.SelectMany(x => x)
-                                                                .DistinctBy(x => string.Join(",", x.FieldsToSetup.SelectMany(y => y.Field.Select(z => z))) + "," + x.MethodOrPropertySymbol)
-                                                                .ToArray();
+                                                                     .DistinctBy(x => string.Join(",", x.FieldsToSetup.SelectMany(y => y.Field.Select(z => z))) + "," + x.MethodOrPropertySymbol)
+                                                                     .ToArray();
 
             if (invokedMethodsOfMocksDistinct.Length == 0)
                 return document;
