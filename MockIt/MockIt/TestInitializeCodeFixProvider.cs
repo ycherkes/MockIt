@@ -53,10 +53,10 @@ namespace MockIt
                 .FirstOrDefault();
 
             // Register a code action that will invoke the fix.
-            context.RegisterCodeFix(CodeAction.Create("Fill with mocks", c => MakeMock(context.Document, creation, c), "MockItTool"), diagnostic);
+            context.RegisterCodeFix(CodeAction.Create("Fill with mocks", c => FillWithMocks(context.Document, creation, c), "MockItTool"), diagnostic);
         }
 
-        private static async Task<Document> MakeMock(Document document, ExpressionStatementSyntax creation,
+        private static async Task<Document> FillWithMocks(Document document, ExpressionStatementSyntax creation,
             CancellationToken cancellationToken)
         {
             var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);

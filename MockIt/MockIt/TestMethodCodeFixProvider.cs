@@ -54,11 +54,11 @@ namespace MockIt
 
             if (invocation == null) return;
 
-            context.RegisterCodeFix(CodeAction.Create("Setup mocks with callbacks", c => MakeMock(context.Document, invocation, c, true), "MockItTool-7353a10c-1be6-4916-bd45-1063dec8778a"), diagnostic);
-            context.RegisterCodeFix(CodeAction.Create("Setup mocks", c => MakeMock(context.Document, invocation, c, false), "MockItTool-c006008d-86e4-4383-8c87-27b4b06c6196"), diagnostic);
+            context.RegisterCodeFix(CodeAction.Create("Setup mocks with callbacks", c => SetupMocks(context.Document, invocation, c, true), "MockItTool-7353a10c-1be6-4916-bd45-1063dec8778a"), diagnostic);
+            context.RegisterCodeFix(CodeAction.Create("Setup mocks", c => SetupMocks(context.Document, invocation, c, false), "MockItTool-c006008d-86e4-4383-8c87-27b4b06c6196"), diagnostic);
         }
 
-        private static async Task<Document> MakeMock(Document document, SyntaxNode invocationSyntax,
+        private static async Task<Document> SetupMocks(Document document, SyntaxNode invocationSyntax,
             CancellationToken cancellationToken, bool withCallBack)
         {
             var testSemanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
