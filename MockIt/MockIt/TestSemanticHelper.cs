@@ -347,7 +347,7 @@ namespace MockIt
         /// <param name="sutSubstitutions"></param>
         /// <param name="typeSymbol"></param>
         /// <returns></returns>
-        public static IReadOnlyCollection<ReplacementInfo> GetReplacedDefinitions(IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions, ISymbol typeSymbol)
+        public static IReadOnlyCollection<ReplacementInfo> GetReplacedDefinitions(IImmutableDictionary<string, ITypeSymbol> sutSubstitutions, ISymbol typeSymbol)
         {
             var replacements = sutSubstitutions.Select(kv => new { Original = kv.Key, Substitution = GetSimpleTypeName(kv.Value) })
                 .Select(kv =>
@@ -380,18 +380,18 @@ namespace MockIt
 
         }
 
-        public static Dictionary<string, ITypeSymbol> GetSubstitutions(ISymbol symbol)
+        public static IImmutableDictionary<string, ITypeSymbol> GetSubstitutions(ISymbol symbol)
         {
             var (typeParameters, typeArguments) = GetGenericInfo(symbol);
 
             if (typeParameters.Length == 0 || typeArguments.Length == 0)
-                return new Dictionary<string, ITypeSymbol>();
+                return ImmutableDictionary<string, ITypeSymbol>.Empty;
 
             var typeMap = typeParameters.Zip(typeArguments, (parameterSymbol, typeSymbol) => new
             {
                 Key = parameterSymbol,
                 Value = typeSymbol
-            }).ToDictionary(x => x.Key.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), x => x.Value);
+            }).ToImmutableDictionary(x => x.Key.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), x => x.Value);
 
             return typeMap;
         }

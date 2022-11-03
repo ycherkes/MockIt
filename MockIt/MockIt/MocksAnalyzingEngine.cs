@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using MockIt.ThirdParty;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -31,7 +32,7 @@ namespace MockIt
             var sutSubstitutions = sutSubstitutionsByInterface.Concat(sutSubstitutionsByConcreteType)
                                                               .Concat(symbolSubstitutions)
                                                               .DistinctBy(x => x.Key)
-                                                              .ToDictionary(x => x.Key, x => x.Value);
+                                                              .ToImmutableDictionary(x => x.Key, x => x.Value);
 
             if (suitableSut.SemanticModel == null)
                 return Array.Empty<Fields>();
@@ -132,7 +133,7 @@ namespace MockIt
             SemanticModel model,
             SutInfo suitableSut,
             SemanticModel semanticModel,
-            Dictionary<string, ITypeSymbol> sutSubstitutions)
+            IImmutableDictionary<string, ITypeSymbol> sutSubstitutions)
         {
             var invokedMethodsOfMocks = methodsAndPropertyInvocations.Select(x => new
             {
@@ -149,7 +150,11 @@ namespace MockIt
             return invokedMethodsOfMocks;
         }
 
-        private static IEnumerable<Fields> GetUsings(ExpressionSyntax expression, ISymbol symbol, SutInfo suitableSut, SemanticModel semanticModel, Dictionary<string, ITypeSymbol> sutSubstitutions)
+        private static IEnumerable<Fields> GetUsings(ExpressionSyntax expression,
+            ISymbol symbol,
+            SutInfo suitableSut,
+            SemanticModel semanticModel,
+            IImmutableDictionary<string, ITypeSymbol> sutSubstitutions)
         {
             var syntax = expression.Parents(x => (x as UsingStatementSyntax)?.Declaration
                                                                              ?.Variables
@@ -184,7 +189,7 @@ namespace MockIt
         private static IEnumerable<FieldsSetups> GetFieldsToSetup(SutInfo suitableSut,
             SemanticModel semanticModel,
             ISymbol symbol,
-            Dictionary<string, ITypeSymbol> sutSubstitutions)
+            IImmutableDictionary<string, ITypeSymbol> sutSubstitutions)
         {
             var suitableFields = suitableSut.InjectedFields.Find(IsSuitableField(semanticModel, symbol, sutSubstitutions));
 
@@ -198,7 +203,7 @@ namespace MockIt
                             .Arguments
                             .Select(y => GetSubstitutions(semanticModel, y))
                             .SelectMany(s => s)
-                            .ToDictionary(s => s.Key, s => s.Value),
+                            .ToImmutableDictionary(s => s.Key, s => s.Value),
                         SutSubstitutions = sutSubstitutions
                     };
                 }).ToArray();
@@ -206,7 +211,7 @@ namespace MockIt
 
         private static Func<TreeNode<DependencyField>, bool> IsSuitableField(SemanticModel semanticModel,
             ISymbol symbol,
-            IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
+            IImmutableDictionary<string, ITypeSymbol> sutSubstitutions)
         {
             return z => (z.Data.Field?.Declaration.Type as GenericNameSyntax)?.TypeArgumentList
                                                                               .Arguments
@@ -216,7 +221,7 @@ namespace MockIt
         private static bool IsSuitableType(SemanticModel semanticModel,
             ExpressionSyntax y,
             ISymbol x,
-            IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
+            IImmutableDictionary<string, ITypeSymbol> sutSubstitutions)
         {
             var symbol = semanticModel.GetSymbolInfo(y).Symbol;
 
@@ -225,7 +230,7 @@ namespace MockIt
 
         private static bool IsSuitableType(ISymbol symbol,
             ISymbol x,
-            IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
+            IImmutableDictionary<string, ITypeSymbol> sutSubstitutions)
         {
             var methodSymbol = x as IMethodSymbol;
             var propertySymbol = x as IPropertySymbol;
@@ -249,7 +254,7 @@ namespace MockIt
             return methodOrPropertySymbol.Name == name.Identifier.Text;
         }
 
-        private static Dictionary<string, ITypeSymbol> GetSubstitutions(SemanticModel semanticModel, ExpressionSyntax y)
+        private static IImmutableDictionary<string, ITypeSymbol> GetSubstitutions(SemanticModel semanticModel, ExpressionSyntax y)
         {
             var model = y.GetModelFromExpression(semanticModel);
             var symbol = model.GetSymbolInfo(y).Symbol;

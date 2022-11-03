@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.Editing;
 using Microsoft.CodeAnalysis.Formatting;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -152,8 +153,8 @@ namespace MockIt
         }
 
         private static string GetReplacedType(ITypeSymbol typeSymbol,
-            Dictionary<string, ITypeSymbol> substitutions,
-            Dictionary<string, ITypeSymbol> sutSubstitutions)
+            IImmutableDictionary<string, ITypeSymbol> substitutions,
+            IImmutableDictionary<string, ITypeSymbol> sutSubstitutions)
         {
             var type = GetActualType(substitutions, sutSubstitutions, typeSymbol).GetSimpleTypeName();
 
@@ -171,8 +172,8 @@ namespace MockIt
         }
 
         private static (string name, ITypeSymbol[] typeArguments) GetMethod(IMethodSymbol methodSymbol,
-            IReadOnlyDictionary<string, ITypeSymbol> substitutions,
-            IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions)
+            IImmutableDictionary<string, ITypeSymbol> substitutions,
+            IImmutableDictionary<string, ITypeSymbol> sutSubstitutions)
         {
             if (!methodSymbol.IsGenericMethod)
                 return (methodSymbol.Name, Array.Empty<ITypeSymbol>());
@@ -181,8 +182,8 @@ namespace MockIt
         }
 
         private static ITypeSymbol GetActualType(
-            IReadOnlyDictionary<string, ITypeSymbol> substitutions,
-            IReadOnlyDictionary<string, ITypeSymbol> sutSubstitutions,
+            IImmutableDictionary<string, ITypeSymbol> substitutions,
+            IImmutableDictionary<string, ITypeSymbol> sutSubstitutions,
             ITypeSymbol typeSymbol)
         {
 
