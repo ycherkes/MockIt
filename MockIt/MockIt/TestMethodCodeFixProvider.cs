@@ -54,8 +54,8 @@ namespace MockIt
 
             if (invocation == null) return;
 
-            context.RegisterCodeFix(CodeAction.Create("Make mock with callbacks", c => MakeMock(context.Document, invocation, c, true), "MockItTool-7353a10c-1be6-4916-bd45-1063dec8778a"), diagnostic);
-            context.RegisterCodeFix(CodeAction.Create("Make mock", c => MakeMock(context.Document, invocation, c, false), "MockItTool-c006008d-86e4-4383-8c87-27b4b06c6196"), diagnostic);
+            context.RegisterCodeFix(CodeAction.Create("Setup mocks with callbacks", c => MakeMock(context.Document, invocation, c, true), "MockItTool-7353a10c-1be6-4916-bd45-1063dec8778a"), diagnostic);
+            context.RegisterCodeFix(CodeAction.Create("Setup mocks", c => MakeMock(context.Document, invocation, c, false), "MockItTool-c006008d-86e4-4383-8c87-27b4b06c6196"), diagnostic);
         }
 
         private static async Task<Document> MakeMock(Document document, SyntaxNode invocationSyntax,
@@ -65,7 +65,10 @@ namespace MockIt
 
             var testInitMethodDecl = TestSemanticHelper.GetTestInitializeMethod(testSemanticModel);
 
-            var declaredFields = testInitMethodDecl.Parent.ChildNodes().OfType<FieldDeclarationSyntax>().ToArray();
+            var declaredFields = testInitMethodDecl.Parent?.ChildNodes().OfType<FieldDeclarationSyntax>().ToArray();
+
+            if ((declaredFields?.Length ?? 0) == 0)
+                return document;
 
             var suts = testInitMethodDecl.GetSuts(testSemanticModel, declaredFields);
 

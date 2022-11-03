@@ -53,12 +53,7 @@ namespace MockIt
                 .FirstOrDefault();
 
             // Register a code action that will invoke the fix.
-            context.RegisterCodeFix(CodeAction.Create("Make mock", c => MakeMock(context.Document, creation, c), "MockItTool"), diagnostic);
-        }
-
-        private static string GetTypeNameFromType(ISymbol symbol)
-        {
-            return symbol.GetSimpleTypeName();
+            context.RegisterCodeFix(CodeAction.Create("Fill with mocks", c => MakeMock(context.Document, creation, c), "MockItTool"), diagnostic);
         }
 
         private static async Task<Document> MakeMock(Document document, ExpressionStatementSyntax creation,
@@ -66,17 +61,22 @@ namespace MockIt
         {
             var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
 
-            var creationExpressionSyntax = creation.Expression.ChildNodes().OfType<ObjectCreationExpressionSyntax>().First();
+            var creationExpressionSyntax = creation.Expression.ChildNodes().OfType<ObjectCreationExpressionSyntax>().FirstOrDefault();
+
+            if (creationExpressionSyntax == null)
+                return document;
 
             var symbolInfo = semanticModel.GetSymbolInfo(creationExpressionSyntax);
 
-            var invokedSymbol = (IMethodSymbol)symbolInfo.CandidateSymbols.FirstOrDefault(x => x is IMethodSymbol
-                                                                                               /*&& ((IMethodSymbol)x).Parameters.All(y => y.Type.IsAbstract)*/);
+            var invokedSymbol = symbolInfo.CandidateSymbols.OfType<IMethodSymbol>().FirstOrDefault(/*&& ((IMethodSymbol)x).Parameters.All(y => y.Type.IsAbstract)*/);
+
+            if ((invokedSymbol?.Parameters.Length ?? 0) == 0)
+                return document;
 
             var constructorParameters = invokedSymbol.Parameters.Select(x => new ConstructorParameters
             {
                 ArgumentName = x.Name,
-                TypeName = GetTypeNameFromType((INamedTypeSymbol)x.Type)
+                TypeName = x.Type.GetSimpleTypeName()
             }).ToArray();
 
             var changes = constructorParameters.MakeConstructorInjections();
