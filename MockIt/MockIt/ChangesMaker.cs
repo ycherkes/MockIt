@@ -64,7 +64,7 @@ namespace MockIt
                                              .ToArray()
                     : methodSymbol.Parameters.Select(z => (ExpressionSyntax)itIdentifier.InvokeGeneric("Is", SyntaxHelper.GetTypeSyntax(GetReplacedType(z.Type, fieldsSetups.Substitutions, fieldsSetups.SutSubstitutions)))
                                                                                         .WithArguments(SyntaxHelper.SimpleLambdaExpression(z.Name)
-                                                                                                                       .WithExpressionBody(SyntaxHelper.EqualsDefaultExpression(z.Name))))
+                                                                                                                   .WithExpressionBody(SyntaxHelper.EqualsDefaultExpression(z.Name))))
                                              .ToArray();
 
                 var setupLambda = SyntaxHelper.SimpleLambdaExpression("x")
@@ -93,19 +93,23 @@ namespace MockIt
 
                 if (isTaskResultReturnType)
                 {
-                    expression = expression.WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed)).Invoke("ReturnsAsync")
+                    expression = expression.WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed))
+                                           .Invoke("ReturnsAsync")
                                            .WithArgument(SyntaxFactory.DefaultExpression(SyntaxHelper.GetTypeSyntax(returnTaskTypeArgument)));
                 }
                 else if (isTaskReturnType)
                 {
                     // ".Returns(Task.CompletedTask)" 
-                    expression = expression.WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed)).Invoke("Returns")
-                                           .WithArgument(SyntaxFactory.IdentifierName("Task").Member("CompletedTask"));
+                    expression = expression.WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed))
+                                           .Invoke("Returns")
+                                           .WithArgument(SyntaxFactory.IdentifierName("Task")
+                                                                      .MemberAccess("CompletedTask"));
                 }
                 else
                 {
                     // ".Returns(default(" + returnType + "))"
-                    expression = expression.WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed)).Invoke("Returns")
+                    expression = expression.WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed))
+                                           .Invoke("Returns")
                                            .WithArgument(SyntaxFactory.DefaultExpression(SyntaxHelper.GetTypeSyntax(returnType)));
                 }
 
@@ -119,33 +123,34 @@ namespace MockIt
 
             if (!propertySymbol.IsWriteOnly && !fields.Expression.IsLeftSideOfAssignExpression())
             {
-                var setupBody = SyntaxFactory.IdentifierName("x").Member(propertySymbol.Name);
+                var setupBody = SyntaxFactory.IdentifierName("x").MemberAccess(propertySymbol.Name);
 
                 var setupLambda = SyntaxHelper.SimpleLambdaExpression("x")
                     .WithExpressionBody(setupBody);
 
                 var getExpression = SyntaxFactory.IdentifierName(identifier)
-                    .Invoke("SetupGet")
-                    .WithArgument(setupLambda)
-                    .WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed))
-                    .Invoke("Returns")
-                    .WithArgument(defaultType);
+                                                 .Invoke("SetupGet")
+                                                 .WithArgument(setupLambda)
+                                                 .WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed))
+                                                 .Invoke("Returns")
+                                                 .WithArgument(defaultType);
 
                 expressions.Add(getExpression);
             }
 
-            if (propertySymbol.IsReadOnly || !fields.Expression.IsLeftSideOfAssignExpression()) return expressions;
+            if (propertySymbol.IsReadOnly || !fields.Expression.IsLeftSideOfAssignExpression())
+                return expressions;
 
             var setupSetBody = SyntaxFactory.IdentifierName("x")
-                .Member(identifier)
-                .SimpleAssignment(defaultType);
+                                            .MemberAccess(identifier)
+                                            .SimpleAssignTo(defaultType);
 
             var setupSetLambda = SyntaxHelper.SimpleLambdaExpression("x")
-                .WithExpressionBody(setupSetBody);
+                                             .WithExpressionBody(setupSetBody);
 
             var setExpression = SyntaxFactory.IdentifierName(identifier)
-                    .Invoke("SetupSet")
-                    .WithArgument(setupSetLambda);
+                                             .Invoke("SetupSet")
+                                             .WithArgument(setupSetLambda);
 
             expressions.Add(setExpression);
 
@@ -203,19 +208,11 @@ namespace MockIt
             var setups = GetSetups(invokedMethodsOfMocks, withCallBack);
             var verifiers = GetVerifiers(invokedMethodsOfMocks);
 
-            foreach (var setup in setups.Reverse())
-            {
-                editor.InsertBefore(invocationSyntax,
-                    setup.WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed, SyntaxFactory.CarriageReturnLineFeed))
-                         .WithAdditionalAnnotations(Formatter.Annotation));
-            }
+            editor.InsertBefore(invocationSyntax, setups.Select(x => x.WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed, SyntaxFactory.CarriageReturnLineFeed))
+                         .WithAdditionalAnnotations(Formatter.Annotation)));
 
-            foreach (var verifier in verifiers)
-            {
-                editor.InsertAfter(invocationSyntax,
-                    verifier.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed))
-                            .WithAdditionalAnnotations(Formatter.Annotation));
-            }
+            editor.InsertAfter(invocationSyntax, verifiers.Select(x => x.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed))
+                            .WithAdditionalAnnotations(Formatter.Annotation)));
         }
 
         public static ConstructorInjections[] MakeConstructorInjections(
@@ -230,73 +227,48 @@ namespace MockIt
                     modifiers = modifiers.Add(SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword));
                 }
 
-                var changes = constructorParameters.Select(x => new ConstructorInjections
+                return constructorParameters.Select(x => new ConstructorInjections
                 {
-                    NewField = SyntaxFactory.FieldDeclaration(
-                        SyntaxFactory.VariableDeclaration(
-                            SyntaxFactory.GenericName(
-                                SyntaxFactory.Identifier("Mock"))
-                                .WithTypeArgumentList(
-                                    SyntaxFactory.TypeArgumentList(
-                                        SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
-                                            SyntaxFactory.IdentifierName(x.TypeName)))))
-                            .WithVariables(
-                                SyntaxFactory.SingletonSeparatedList(
-                                    SyntaxFactory.VariableDeclarator(
-                                        SyntaxFactory.Identifier("_" + "mock" + FirstCharToUpper(x.ArgumentName))))))
-                        .WithModifiers(modifiers),
-                    NewExpression = SyntaxFactory.ExpressionStatement(
-                        SyntaxFactory.AssignmentExpression(
-                            SyntaxKind.SimpleAssignmentExpression,
-                            SyntaxFactory.IdentifierName("_" + "mock" + FirstCharToUpper(x.ArgumentName)),
-                            SyntaxFactory.ObjectCreationExpression(
-                                SyntaxFactory.GenericName(
-                                    SyntaxFactory.Identifier("Mock"))
-                                    .WithTypeArgumentList(
-                                        SyntaxFactory.TypeArgumentList(
-                                            SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
-                                                SyntaxFactory.IdentifierName(x.TypeName)))))
-                                .WithArgumentList(SyntaxFactory.ArgumentList()))),
-                    CreationArgument = SyntaxFactory.Argument(
-                        SyntaxFactory.MemberAccessExpression(
-                            SyntaxKind.SimpleMemberAccessExpression,
-                            SyntaxFactory.IdentifierName("_" + "mock" + FirstCharToUpper(x.ArgumentName)),
-                            SyntaxFactory.IdentifierName("Object")))
+                    NewField = SyntaxFactory.Identifier("Mock")
+                                            .AsGeneric()
+                                            .WithTypeArgument(x.TypeName)
+                                            .AsVariableDeclaration()
+                                            .WithVariable("_" + "mock" + FirstCharToUpper(x.ArgumentName))
+                                            .AsFieldDeclaration()
+                                            .WithModifiers(modifiers),
+
+                    NewExpression = SyntaxFactory.IdentifierName("_" + "mock" + FirstCharToUpper(x.ArgumentName))
+                                                 .SimpleAssignTo(SyntaxFactory.Identifier("Mock")
+                                                                              .AsGeneric()
+                                                                              .WithTypeArgument(x.TypeName)
+                                                                              .AsObjectCreationExpressionWithoutArguments())
+                                                 .AsExpressionStatement(),
+
+                    CreationArgument = SyntaxFactory.IdentifierName("_" + "mock" + FirstCharToUpper(x.ArgumentName))
+                                                    .MemberAccess("Object")
+                                                    .AsArgument()
                 }).ToArray();
-                return changes;
             }
 
-            var changes1 = constructorParameters.Select(x => new ConstructorInjections
+            return constructorParameters.Select(x => new ConstructorInjections
             {
 
-                NewExpression = SyntaxFactory.LocalDeclarationStatement(SyntaxFactory.VariableDeclaration(
-                    SyntaxFactory.IdentifierName(
-                        SyntaxFactory.Identifier(
-                            SyntaxFactory.TriviaList(),
-                            SyntaxKind.VarKeyword,
-                            "var",
-                            "var",
-                            SyntaxFactory.TriviaList())))
-                .WithVariables(
-                    SyntaxFactory.SingletonSeparatedList<VariableDeclaratorSyntax>(
-                        SyntaxFactory.VariableDeclarator(
-                            SyntaxFactory.Identifier("mock" + FirstCharToUpper(x.ArgumentName)))
-                        .WithInitializer(
-                            SyntaxFactory.EqualsValueClause(
-                                SyntaxFactory.ObjectCreationExpression(
-                                SyntaxFactory.GenericName(
-                                    SyntaxFactory.Identifier("Mock"))
-                                    .WithTypeArgumentList(
-                                        SyntaxFactory.TypeArgumentList(
-                                            SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
-                                                SyntaxFactory.IdentifierName(x.TypeName)))))))))),
-                CreationArgument = SyntaxFactory.Argument(
-                        SyntaxFactory.MemberAccessExpression(
-                            SyntaxKind.SimpleMemberAccessExpression,
-                            SyntaxFactory.IdentifierName("mock" + FirstCharToUpper(x.ArgumentName)),
-                            SyntaxFactory.IdentifierName("Object")))
+                NewExpression = SyntaxHelper.VarTypeSyntax()
+                                    .AsVariableDeclaration()
+                                    .WithVariable(SyntaxFactory.Identifier("mock" + FirstCharToUpper(x.ArgumentName))
+                                                               .AsVariableDeclarator()
+                                                               .WithInitializer(
+                                                                   SyntaxFactory.EqualsValueClause(
+                                                                       SyntaxFactory.Identifier("Mock")
+                                                                                    .AsGeneric()
+                                                                                    .WithTypeArgument(x.TypeName)
+                                                                                    .AsObjectCreationExpressionWithoutArguments())))
+                                    .AsLocalDeclarationStatement(),
+
+                CreationArgument = SyntaxFactory.IdentifierName("mock" + FirstCharToUpper(x.ArgumentName))
+                                                .MemberAccess("Object")
+                                                .AsArgument()
             }).ToArray();
-            return changes1;
         }
 
         private static string FirstCharToUpper(string input)
@@ -324,10 +296,8 @@ namespace MockIt
                 editor.InsertBefore(creation.Parent.Parent, changes.Select(x => x.NewField));
             }
 
-            editor.InsertBefore(creation,
-                changes.Select(x => x.NewExpression.WithAdditionalAnnotations(Formatter.Annotation)));
-            editor.ReplaceNode(creationExpressionSyntax.ArgumentList,
-                SyntaxFactory.ArgumentList(SyntaxFactory.SeparatedList<ArgumentSyntax>(arguments)));
+            editor.InsertBefore(creation, changes.Select(x => x.NewExpression.WithAdditionalAnnotations(Formatter.Annotation)));
+            editor.ReplaceNode(creationExpressionSyntax.ArgumentList, arguments.AsArgumentList());
 
             return editor.GetChangedDocument();
         }

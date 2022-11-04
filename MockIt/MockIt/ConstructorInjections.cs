@@ -7,6 +7,6 @@ namespace MockIt
     {
         public FieldDeclarationSyntax NewField { get; set; }
         public SyntaxNode NewExpression { get; set; }
-        public SyntaxNodeOrToken CreationArgument { get; set; }
+        public ArgumentSyntax CreationArgument { get; set; }
     }
 }

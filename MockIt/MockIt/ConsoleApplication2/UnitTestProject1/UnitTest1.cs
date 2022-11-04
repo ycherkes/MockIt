@@ -1,5 +1,6 @@
 ﻿using DemoClassLibrary;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using System.Collections.Generic;
 
 namespace UnitTestProject1
@@ -18,7 +19,7 @@ namespace UnitTestProject1
         [TestMethod]
         public void TestMethod()
         {
-            var prop = _sut.PropertyFoo;
+            var prop = sut.PropertyFoo;
         }
 
         [TestMethod]

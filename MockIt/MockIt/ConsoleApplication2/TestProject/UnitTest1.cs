@@ -5,7 +5,7 @@ namespace TestProject
 {
     public class UnitTest1
     {
-        private Class1<List<string>, Dictionary<int, string>> _sut;
+        private readonly Class1<List<string>, Dictionary<int, string>> _sut;
 
         public UnitTest1()
         {
