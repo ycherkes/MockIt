@@ -12,7 +12,6 @@ namespace TestProject
             _sut = new Class1<List<string>, Dictionary<int, string>>();
         }
 
-        [Fact]
         public void Foo()
         {
             var sut = new Class1<List<string>, Dictionary<int, string>>();

@@ -162,6 +162,14 @@ namespace MockIt.Test
                 [TestClass]
                 public class UnitTest2
                 {
+                    private IService _sut;
+
+                    [TestInitialize]
+                    public void TestInitialize()
+                    {
+                        _sut = new Service();
+                    }
+
                     [TestMethod]
                     public void TestMethod1()
                     {
@@ -199,18 +207,29 @@ namespace MockIt.Test
                     }
                 }
             }";
-            var expected = new DiagnosticResult
+            var expected1 = new DiagnosticResult
             {
                 Id = TestInitializeDiagnosticAnalyzer.DiagnosticId,
                 Message = "Can be mocked",
                 Severity = DiagnosticSeverity.Info,
                 Locations =
                     new[] {
-                            new DiagnosticResultLocation("Test0.cs", 13, 33)
+                            new DiagnosticResultLocation("Test0.cs", 15, 25)
                         }
             };
 
-            VerifyCSharpDiagnostic(test, expected);
+            var expected2 = new DiagnosticResult
+            {
+                Id = TestInitializeDiagnosticAnalyzer.DiagnosticId,
+                Message = "Can be mocked",
+                Severity = DiagnosticSeverity.Info,
+                Locations =
+                    new[] {
+                            new DiagnosticResultLocation("Test0.cs", 21, 33)
+                        }
+            };
+
+            VerifyCSharpDiagnostic(test, expected1, expected2);
 
             var fixtest = @"
             using Microsoft.VisualStudio.TestTools.UnitTesting;

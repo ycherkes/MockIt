@@ -4,9 +4,9 @@ using System.Collections.Immutable;
 
 namespace MockIt
 {
-    public class FieldsSetups
+    public class FieldOrLocalVariableSetups
     {
-        public IEnumerable<string> Field { get; set; }
+        public IEnumerable<string> FieldOrLocalVariable { get; set; }
         public IImmutableDictionary<string, ITypeSymbol> Substitutions { get; set; }
         public IImmutableDictionary<string, ITypeSymbol> SutSubstitutions { get; internal set; }
     }

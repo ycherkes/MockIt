@@ -14,9 +14,9 @@ namespace MockIt
 {
     public static class ChangesMaker
     {
-        private static IEnumerable<ExpressionStatementSyntax> GetVerifiers(IEnumerable<Fields> invokedMethodsOfMocks)
+        private static IEnumerable<ExpressionStatementSyntax> GetVerifiers(IEnumerable<FieldOrLocalVariables> invokedMethodsOfMocks)
         {
-            var verifiers = invokedMethodsOfMocks.SelectMany(x => x.FieldsToSetup.SelectMany(y => y.Field))
+            var verifiers = invokedMethodsOfMocks.SelectMany(x => x.FieldOrLocalVariablesToSetup.SelectMany(y => y.FieldOrLocalVariable))
                                                  .Distinct()
                                                  .Select(x => SyntaxFactory.ExpressionStatement(SyntaxFactory.IdentifierName(x).Invoke("VerifyAll")))
                                                  .ToArray();
@@ -24,11 +24,11 @@ namespace MockIt
             return verifiers;
         }
 
-        private static ExpressionStatementSyntax[] GetSetups(IEnumerable<Fields> invokedMethodsOfMocks,
+        private static ExpressionStatementSyntax[] GetSetups(IEnumerable<FieldOrLocalVariables> invokedMethodsOfMocks,
             bool withCallBack)
         {
-            var setups = invokedMethodsOfMocks.SelectMany(x => x.FieldsToSetup
-                .SelectMany(y => y.Field.Select(f => GetSetups(f, x, y, withCallBack))))
+            var setups = invokedMethodsOfMocks.SelectMany(x => x.FieldOrLocalVariablesToSetup
+                .SelectMany(y => y.FieldOrLocalVariable.Select(f => GetSetups(f, x, y, withCallBack))))
                 .SelectMany(x => x)
                 //.DistinctBy(x => x.ToFullString())
                 .DistinctBy(x => x, (st, nd) => SyntaxFactory.AreEquivalent(st, nd, false))
@@ -38,7 +38,7 @@ namespace MockIt
             return setups;
         }
 
-        private static IReadOnlyCollection<ExpressionSyntax> GetSetups(string identifier, Fields fields, FieldsSetups fieldsSetups, bool withCallBack)
+        private static IReadOnlyCollection<ExpressionSyntax> GetSetups(string identifier, FieldOrLocalVariables fields, FieldOrLocalVariableSetups fieldsSetups, bool withCallBack)
         {
             if (fields.MethodOrPropertySymbol is IMethodSymbol methodSymbol)
             {
@@ -203,7 +203,7 @@ namespace MockIt
 
         public static void ApplyChanges(SyntaxNode invocationSyntax,
             SyntaxEditor editor,
-            IReadOnlyCollection<Fields> invokedMethodsOfMocks, bool withCallBack)
+            IReadOnlyCollection<FieldOrLocalVariables> invokedMethodsOfMocks, bool withCallBack)
         {
             var setups = GetSetups(invokedMethodsOfMocks, withCallBack);
             var verifiers = GetVerifiers(invokedMethodsOfMocks);

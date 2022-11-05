@@ -16,9 +16,24 @@ namespace UnitTestProject1
             _sut = new Class1<List<string>, Dictionary<int, string>>();
         }
 
+        private void SimpleNonTestMethod()
+        {
+            var sut = new Class1<List<string>, Dictionary<int, string>>();
+        }
+
+        [TestMethod]
+        private void SimpleTestMethod()
+        {
+            var sut = new Class1<List<string>, Dictionary<int, string>>();
+
+            var prop = sut.PropertyFoo;
+        }
+
         [TestMethod]
         public void TestMethod()
         {
+            var sut = new Class1<List<string>, Dictionary<int, string>>();
+
             var prop = sut.PropertyFoo;
         }
 

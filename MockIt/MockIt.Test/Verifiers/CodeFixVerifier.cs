@@ -93,7 +93,7 @@ namespace MockIt.Test.Verifiers
                     break;
                 }
 
-                document = ApplyFix(document, actions.ElementAt(0));
+                document = ApplyFix(document, actions.ElementAt(i));
                 analyzerDiagnostics = GetSortedDiagnosticsFromDocuments(analyzer, new[] { document });
 
                 //var newCompilerDiagnostics = GetNewDiagnostics(compilerDiagnostics, GetCompilerDiagnostics(document));

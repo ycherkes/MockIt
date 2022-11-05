@@ -57,7 +57,7 @@ namespace MockIt
             {
                 var testSemanticModel = semanticContext.SemanticModel;
 
-                var methodDeclarations = TestSemanticHelper.GetTestMethods(testSemanticModel);
+                var methodDeclarations = TestSemanticHelper.GetMethods(testSemanticModel).ToArray();
                 var methods = TestSemanticHelper.GetMethodsToConfigureMocks(methodDeclarations);
                 var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(methodDeclarations, methods);
 
@@ -67,14 +67,15 @@ namespace MockIt
                 if (!memberAccessExpressions.Any())
                     return;
 
-                var testInitMethodDecl = TestSemanticHelper.GetSutCreationContexts(testSemanticModel).FirstOrDefault()?.MethodSyntax;
+                var sutCreationContexts = TestSemanticHelper.GetSutCreationContextContainer(testSemanticModel);
 
-                var declaredFields = testInitMethodDecl?.Parent?.ChildNodes().OfType<FieldDeclarationSyntax>().ToArray();
+                if (sutCreationContexts.Fields.Length == 0 && sutCreationContexts.Contexts.All(x => x.DeclaredVariables.Length == 0)) return;
 
-                if (declaredFields == null) return;
+                //var suts = firstMethod.GetSuts(testSemanticModel, declaredFields, null, null);
+                //var ssuts = contextsWithDeclaredVariables.SelectMany(c => c.context.MethodSyntax.GetSuts(testSemanticModel, declaredFields, c.variables, c.context));
+                var suts = sutCreationContexts.Contexts.SelectMany(c => c.GetSuts1(testSemanticModel, sutCreationContexts.Fields)).ToArray();
 
-                var suts = testInitMethodDecl.GetSuts(testSemanticModel, declaredFields);
-                var sutIdentifiers = suts.Select(x => x.Identifier.Identifier.Text).ToArray();
+                var sutIdentifiers = suts.Select(x => x.Identifier?.Text).ToArray();
 
                 memberAccessExpressions = memberAccessExpressions.Where(x => x.DescendantNodesAndSelf()
                                                                               .Any(y => sutIdentifiers.Contains((y as IdentifierNameSyntax)?.Identifier.Text)))
@@ -84,8 +85,8 @@ namespace MockIt
                 {
                     Syntax = expressionSyntax,
                     ToBeMocked = !IsNotExpressionNeedsToMock((await MocksAnalyzingEngine.GetInvokedMethodsOfMock(expressionSyntax, testSemanticModel, suts))
-                                                                                        .SelectMany(x => x.FieldsToSetup
-                                                                                                          .SelectMany(y => y.Field))
+                                                                                        .SelectMany(x => x.FieldOrLocalVariablesToSetup
+                                                                                                          .SelectMany(y => y.FieldOrLocalVariable))
                                                                                         .Distinct()
                                                                                         .ToArray(),
                                                              expressionSyntax)

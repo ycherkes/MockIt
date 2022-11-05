@@ -13,28 +13,27 @@ namespace MockIt
 {
     public static class TestSemanticHelper
     {
-        private static readonly string[] XUnitMethodsAttributes;
-        private static readonly string[] TestMethodsAttributes;
-
-        static TestSemanticHelper()
+        private static readonly HashSet<string> TestMethodsAttributes = new HashSet<string> { "Test", "TestMethod", "Fact", "Theory" };
+        private static readonly HashSet<string> SetupMethodsAttributes = new HashSet<string> { "SetUp", "TestInitialize" };
+        private static readonly HashSet<string> TestFrameworkUsings = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            XUnitMethodsAttributes = new[] { "Fact", "Theory" };
-            TestMethodsAttributes = new[] { "Test", "TestMethod" }.Concat(XUnitMethodsAttributes)
-                                                                    .ToArray();
-        }
+            "Microsoft.VisualStudio.TestTools.UnitTesting",
+            "Xunit",
+            "NUnit.Framework"
+        };
 
         public static SutCreationContext[] GetSutCreationContexts(SemanticModel semanticModel)
         {
-            var testMethods = GetMethodsWithAttributes(semanticModel, TestMethodsAttributes)?.ToArray() ?? Array.Empty<MethodDeclarationSyntax>();
-            var setupMethods = GetMethodsWithAttributes(semanticModel, "SetUp", "TestInitialize").Cast<BaseMethodDeclarationSyntax>().ToArray();
+            var allMethods = GetMethods(semanticModel).ToArray();
+            var setupMethods = WithAttributes(allMethods, SetupMethodsAttributes).Cast<BaseMethodDeclarationSyntax>().ToArray();
             var csu = semanticModel.SyntaxTree.GetRoot() as CompilationUnitSyntax;
-            var usings = csu?.Usings.FirstOrDefault(x => x.Name.ToFullString().Equals("Xunit", StringComparison.OrdinalIgnoreCase));
-            var firstTestMethod = testMethods.FirstOrDefault();
+            var usings = csu?.Usings.FirstOrDefault(x => TestFrameworkUsings.Contains(x.Name.ToFullString()));
+            var firstTestMethod = WithAttributes(allMethods, TestMethodsAttributes).FirstOrDefault();
 
-            if (firstTestMethod == null && !setupMethods.Any() && usings == null)
+            if (allMethods.Length == 0 || usings == null)
                 return Array.Empty<SutCreationContext>();
 
-            var classDeclSyntax = firstTestMethod == null && !setupMethods.Any()
+            var classDeclSyntax = firstTestMethod == null && setupMethods.Length == 0
                                     ? csu?.DescendantNodes().OfType<ClassDeclarationSyntax>().FirstOrDefault()
                                     : Parents(firstTestMethod ?? setupMethods.First(), node => node is ClassDeclarationSyntax);
 
@@ -42,7 +41,9 @@ namespace MockIt
                                                .Where(n => n.IsKind(SyntaxKind.ConstructorDeclaration))
                                                .OfType<ConstructorDeclarationSyntax>()
                                                .Where(x => x.Modifiers.All(y => y.Text != "static"))
-                                               .ToArray() ?? Enumerable.Empty<ConstructorDeclarationSyntax>();
+                                               .ToArray() ?? Array.Empty<ConstructorDeclarationSyntax>();
+
+            var methodsExcludingSetupMethods = allMethods.Except(setupMethods).Where(x => x.Parent == classDeclSyntax);
 
             return setupMethods.Select(x => new SutCreationContext
             {
@@ -52,34 +53,78 @@ namespace MockIt
             {
                 ContextType = SutCreationContextType.Constructor,
                 MethodSyntax = x
-            })).Concat(testMethods.Select(x => new SutCreationContext
+            })).Concat(methodsExcludingSetupMethods.Select(x => new SutCreationContext
+            {
+                ContextType = SutCreationContextType.Method,
+                MethodSyntax = x
+            })).ToArray();
+        }
+
+        public static SutCreationContextContainer GetSutCreationContextContainer(SemanticModel semanticModel)
+        {
+            var allMethods = GetMethods(semanticModel).ToArray();
+            var setupMethods = WithAttributes(allMethods, SetupMethodsAttributes).Cast<BaseMethodDeclarationSyntax>().ToArray();
+            var csu = semanticModel.SyntaxTree.GetRoot() as CompilationUnitSyntax;
+            var usings = csu?.Usings.FirstOrDefault(x => TestFrameworkUsings.Contains(x.Name.ToFullString()));
+            var firstTestMethod = WithAttributes(allMethods, TestMethodsAttributes).FirstOrDefault();
+
+            if (allMethods.Length == 0 || usings == null)
+                return new SutCreationContextContainer();
+
+            var classDeclSyntax = firstTestMethod == null && setupMethods.Length == 0
+                                    ? csu?.DescendantNodes().OfType<ClassDeclarationSyntax>().FirstOrDefault()
+                                    : Parents(firstTestMethod ?? setupMethods.First(), node => node is ClassDeclarationSyntax);
+
+            var constructors = classDeclSyntax?.ChildNodes()
+                                               .Where(n => n.IsKind(SyntaxKind.ConstructorDeclaration))
+                                               .OfType<ConstructorDeclarationSyntax>()
+                                               .Where(x => x.Modifiers.All(y => y.Text != "static"))
+                                               .ToArray() ?? Array.Empty<ConstructorDeclarationSyntax>();
+
+            var methodsExcludingSetupMethods = allMethods.Except(setupMethods).Where(x => x.Parent == classDeclSyntax);
+
+            var contexts = setupMethods.Select(x => new SutCreationContext
+            {
+                ContextType = SutCreationContextType.InitMethod,
+                MethodSyntax = x
+            }).Concat(constructors.Select(x => new SutCreationContext
+            {
+                ContextType = SutCreationContextType.Constructor,
+                MethodSyntax = x
+            })).Concat(methodsExcludingSetupMethods.Select(x => new SutCreationContext
             {
                 ContextType = SutCreationContextType.Method,
                 MethodSyntax = x
             })).ToArray();
 
-            //var methods = constructors.Concat(setupMethods);
+            foreach (var context in contexts)
+            {
+                context.DeclaredVariables = context.MethodSyntax.Body?.ChildNodes().OfType<LocalDeclarationStatementSyntax>().ToArray() ?? Array.Empty<LocalDeclarationStatementSyntax>();
+            }
 
-            //return methods.FirstOrDefault();
+            return new SutCreationContextContainer
+            {
+                Contexts = contexts,
+                Fields = contexts.FirstOrDefault()?.MethodSyntax?.Parent?.ChildNodes().OfType<FieldDeclarationSyntax>().ToArray() ?? Array.Empty<FieldDeclarationSyntax>()
+            };
         }
 
-        public static MethodDeclarationSyntax[] GetTestMethods(SemanticModel semanticModel)
+        private static IEnumerable<MethodDeclarationSyntax> WithAttributes(IEnumerable<MethodDeclarationSyntax> methods, HashSet<string> attributes)
         {
-            var methodDeclarations = GetMethodsWithAttributes(semanticModel, TestMethodsAttributes);
+            var methodDecl = methods.Where(x => x.AttributeLists
+                                                 .Any(y => y.Attributes
+                                                            .Any(z => z.Name is IdentifierNameSyntax syntax && attributes.Contains(syntax.Identifier.Text))));
 
-            return methodDeclarations.ToArray();
+            return methodDecl;
         }
 
-        private static IEnumerable<MethodDeclarationSyntax> GetMethodsWithAttributes(SemanticModel semanticModel, params string[] attributes)
+        public static IEnumerable<MethodDeclarationSyntax> GetMethods(SemanticModel semanticModel)
         {
             var methodDecl = semanticModel.SyntaxTree
                                           .GetRoot()
                                           .DescendantNodes()
                                           .OfType<MethodDeclarationSyntax>()
-                                          .Where(x => x.AttributeLists
-                                                       .Any(y => y.Attributes
-                                                                  .Any(z => z.Name is IdentifierNameSyntax syntax &&
-                                                                            attributes.Contains(syntax.Identifier.Text))));
+                                          .Where(x => x.Modifiers.All(y => y.Text != "static"));
 
             return methodDecl;
         }
@@ -212,9 +257,11 @@ namespace MockIt
         }
 
         //todo .. and implicit fields also
-        public static IReadOnlyCollection<SutInfo> GetSuts(this SyntaxNode testInitMethodDecl, SemanticModel semanticModel,
-            IReadOnlyCollection<FieldDeclarationSyntax> declaredFields, bool fillImplicitDependencies = true)
+        public static IReadOnlyCollection<SutInfo> GetSuts(this SyntaxNode testInitMethodDecl,
+            SemanticModel semanticModel,
+            IReadOnlyCollection<FieldDeclarationSyntax> declaredFields)
         {
+            //const bool fillImplicitDependencies = true;
             var suts = testInitMethodDecl.DescendantNodes()
                 .OfType<ObjectCreationExpressionSyntax>()
                 .Select(x => new
@@ -226,14 +273,14 @@ namespace MockIt
                 .Select(x => new SutInfo
                 {
                     SymbolInfo = x.SymbolInfo,
-                    Identifier = x.Expression.Parent?.DescendantNodes().OfType<IdentifierNameSyntax>().FirstOrDefault(),
+                    Identifier = x.Expression.Parent?.DescendantNodes().OfType<IdentifierNameSyntax>().Select(i => i.Identifier).FirstOrDefault(),
                     SemanticModel = GetSutSemanticModel(semanticModel, x.SymbolInfo.Symbol, x.SymbolInfo.Symbol?.Locations.First()),
                     //explicitly declared fields
                     InjectedFields = declaredFields.Where(z => x.Expression.ArgumentList != null
                                                                        && x.Expression.ArgumentList.Arguments.Any(y => IsSuitableDeclaredField(z, y)))
                                                             .Select(y => new DependencyField
                                                             {
-                                                                Field = y,
+                                                                FieldOrLocalVariable = y.Declaration,
                                                                 IsInjectedFromConstructor = true
                                                             })
                                                             .Select(y => new TreeNode<DependencyField>(y))
@@ -242,9 +289,55 @@ namespace MockIt
                 .Where(x => x.InjectedFields.Any())
                 .ToArray();
 
-            if (!fillImplicitDependencies) return suts;
+            //if (!fillImplicitDependencies) return suts;
 
             var implicitDependencies = GetTestInitSetups(testInitMethodDecl, declaredFields);
+
+            var allInjectedFields = suts.SelectMany(sutInfo => sutInfo.InjectedFields);
+
+            foreach (var field in allInjectedFields)
+            {
+                FillSetupsTree(field, field, implicitDependencies);
+            }
+
+            return suts;
+        }
+
+        public static IReadOnlyCollection<SutInfo> GetSuts1(this SutCreationContext context,
+            SemanticModel semanticModel,
+            IReadOnlyCollection<FieldDeclarationSyntax> declaredFields)
+        {
+            //const bool fillImplicitDependencies = true;
+            var suts = context.MethodSyntax.DescendantNodes()
+                .OfType<ObjectCreationExpressionSyntax>()
+                .Select(x => new
+                {
+                    Expression = x,
+                    SymbolInfo = semanticModel.GetSymbolInfo(x.Type)
+                })
+                .Where(x => x.SymbolInfo.Symbol?.Locations.Any(y => y.IsInSource && y.SourceTree != null) == true)
+                .Select(x => new SutInfo
+                {
+                    SymbolInfo = x.SymbolInfo,
+                    Identifier = ((VariableDeclarationSyntax)x.Expression.Parents(n => n is VariableDeclarationSyntax))?.Variables.FirstOrDefault()?.Identifier ?? x.Expression.Parent?.DescendantNodes().OfType<IdentifierNameSyntax>().Select(i => i.Identifier).FirstOrDefault(),
+                    SemanticModel = GetSutSemanticModel(semanticModel, x.SymbolInfo.Symbol, x.SymbolInfo.Symbol?.Locations.First()),
+                    //explicitly declared fields
+                    InjectedFields = declaredFields.Select(d => d.Declaration).Concat(context.DeclaredVariables.Select(v => v.Declaration)).Where(z => x.Expression.ArgumentList != null
+                                                                       && x.Expression.ArgumentList.Arguments.Any(y => IsSuitableDeclaredVariable(z, y)))
+                                                            .Select(y => new DependencyField
+                                                            {
+                                                                FieldOrLocalVariable = y,
+                                                                IsInjectedFromConstructor = true
+                                                            })
+                                                            .Select(y => new TreeNode<DependencyField>(y))
+                                                           .ToArray()
+                })
+                .Where(x => x.InjectedFields.Any())
+                .ToArray();
+
+            //if (!fillImplicitDependencies) return suts;
+
+            var implicitDependencies = GetTestInitSetups(context.MethodSyntax, declaredFields);
 
             var allInjectedFields = suts.SelectMany(sutInfo => sutInfo.InjectedFields);
 
@@ -269,9 +362,9 @@ namespace MockIt
                 .Select(x => new SetupsInfo
                 {
                     Expression = x.Expression,
-                    ParentField = declaredFields.FirstOrDefault(y => y.Declaration.Variables.Any(z => z.Identifier.Text == x.Match.Groups[1].Value.Trim())),
+                    ParentField = declaredFields.FirstOrDefault(y => y.Declaration.Variables.Any(z => z.Identifier.Text == x.Match.Groups[1].Value.Trim()))?.Declaration,
                     SetupIdentifierNode = x.Expression.DescendantNodes().OfType<MemberAccessExpressionSyntax>().FirstOrDefault(y => x.Match.Groups[4].Value.Trim() == y.Name.ToString() || x.Match.Groups[4].Value.Trim().StartsWith(y.Name + "(")),
-                    ReturnsField = declaredFields.FirstOrDefault(y => y.Declaration.Variables.Any(z => z.Identifier.Text == x.Match.Groups[7].Value.Trim())),
+                    ReturnsField = declaredFields.FirstOrDefault(y => y.Declaration.Variables.Any(z => z.Identifier.Text == x.Match.Groups[7].Value.Trim()))?.Declaration,
                 })
                 .ToArray();
 
@@ -280,9 +373,9 @@ namespace MockIt
 
         private static void FillSetupsTree(TreeNode<DependencyField> rootFieldSyntax, TreeNode<DependencyField> parentFieldSyntax, IReadOnlyCollection<SetupsInfo> setupsInfos)
         {
-            var fieldSetups = setupsInfos.Where(x => x.ParentField == parentFieldSyntax.Data.Field).Select(x => new DependencyField
+            var fieldSetups = setupsInfos.Where(x => x.ParentField == parentFieldSyntax.Data.FieldOrLocalVariable).Select(x => new DependencyField
             {
-                Field = x.ReturnsField,
+                FieldOrLocalVariable = x.ReturnsField,
                 IsInjectedFromConstructor = false,
                 SetupExpression = x.Expression,
                 SetupIdentifierNode = x.SetupIdentifierNode
@@ -343,6 +436,17 @@ namespace MockIt
                 suitableSutMember = ((INamedTypeSymbol)suitableSut.SymbolInfo.Symbol)?.FindImplementationForInterfaceMember(s1.ConstructedFrom);
 
             return suitableSutMember ?? memberSymbol;
+        }
+
+        private static bool IsSuitableDeclaredVariable(VariableDeclarationSyntax z, ArgumentSyntax y)
+        {
+            var variableIdentifier = z.Variables.FirstOrDefault()?.Identifier.Text;
+            return new[]
+            {
+                variableIdentifier + ".Object",
+                variableIdentifier
+            }
+            .Contains(y.Expression.GetText().ToString().Trim());
         }
 
         private static bool IsSuitableDeclaredField(BaseFieldDeclarationSyntax z, ArgumentSyntax y)

@@ -63,14 +63,12 @@ namespace MockIt
         {
             var testSemanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
 
-            var testInitMethodDecl = TestSemanticHelper.GetSutCreationContexts(testSemanticModel).FirstOrDefault()?.MethodSyntax;
+            var sutCreationContext = TestSemanticHelper.GetSutCreationContextContainer(testSemanticModel);
 
-            var declaredFields = testInitMethodDecl.Parent?.ChildNodes().OfType<FieldDeclarationSyntax>().ToArray();
-
-            if ((declaredFields?.Length ?? 0) == 0)
+            if (sutCreationContext.Fields.Length == 0 && sutCreationContext.Contexts.All(x => x.DeclaredVariables.Length == 0))
                 return document;
 
-            var suts = testInitMethodDecl.GetSuts(testSemanticModel, declaredFields);
+            var suts = sutCreationContext.Contexts.SelectMany(c => c.GetSuts1(testSemanticModel, sutCreationContext.Fields)).ToArray();
 
             var memberAccessExpressions = invocationSyntax.DescendantNodes()
                 .OfType<ExpressionSyntax>()
@@ -85,7 +83,7 @@ namespace MockIt
             var invokedMethodsOfMocks = await Task.WhenAll(memberAccessExpressions.Select(expressionSyntax => MocksAnalyzingEngine.GetInvokedMethodsOfMock(expressionSyntax, testSemanticModel, suts)));
 
             var invokedMethodsOfMocksDistinct = invokedMethodsOfMocks.SelectMany(x => x)
-                                                                     .DistinctBy(x => string.Join(",", x.FieldsToSetup.SelectMany(y => y.Field.Select(z => z))) + "," + x.MethodOrPropertySymbol)
+                                                                     .DistinctBy(x => string.Join(",", x.FieldOrLocalVariablesToSetup.SelectMany(y => y.FieldOrLocalVariable.Select(z => z))) + "," + x.MethodOrPropertySymbol)
                                                                      .ToArray();
 
             if (invokedMethodsOfMocksDistinct.Length == 0)

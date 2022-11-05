@@ -1,13 +1,13 @@
-using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Collections.Generic;
 
 namespace MockIt
 {
-    public class Fields
+    public class FieldOrLocalVariables
     {
         public ISymbol MethodOrPropertySymbol { get; set; }
-        public IEnumerable<FieldsSetups> FieldsToSetup { get; set; }
+        public IEnumerable<FieldOrLocalVariableSetups> FieldOrLocalVariablesToSetup { get; set; }
         public ExpressionSyntax Expression { get; set; }
     }
 }
