@@ -8,7 +8,7 @@ namespace MockIt
     {
         public SymbolInfo SymbolInfo { get; set; }
 
-        public IReadOnlyCollection<TreeNode<DependencyField>> InjectedFields { get; set; }
+        public IReadOnlyCollection<TreeNode<Dependency>> InjectedDependencies { get; set; }
         public SemanticModel SemanticModel { get; set; }
         public SyntaxToken? Identifier { get; set; }
     }

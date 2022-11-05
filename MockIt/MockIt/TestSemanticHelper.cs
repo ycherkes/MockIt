@@ -257,53 +257,8 @@ namespace MockIt
         }
 
         //todo .. and implicit fields also
-        public static IReadOnlyCollection<SutInfo> GetSuts(this SyntaxNode testInitMethodDecl,
-            SemanticModel semanticModel,
-            IReadOnlyCollection<FieldDeclarationSyntax> declaredFields)
-        {
-            //const bool fillImplicitDependencies = true;
-            var suts = testInitMethodDecl.DescendantNodes()
-                .OfType<ObjectCreationExpressionSyntax>()
-                .Select(x => new
-                {
-                    Expression = x,
-                    SymbolInfo = semanticModel.GetSymbolInfo(x.Type)
-                })
-                .Where(x => x.SymbolInfo.Symbol?.Locations.Any(y => y.IsInSource && y.SourceTree != null) == true)
-                .Select(x => new SutInfo
-                {
-                    SymbolInfo = x.SymbolInfo,
-                    Identifier = x.Expression.Parent?.DescendantNodes().OfType<IdentifierNameSyntax>().Select(i => i.Identifier).FirstOrDefault(),
-                    SemanticModel = GetSutSemanticModel(semanticModel, x.SymbolInfo.Symbol, x.SymbolInfo.Symbol?.Locations.First()),
-                    //explicitly declared fields
-                    InjectedFields = declaredFields.Where(z => x.Expression.ArgumentList != null
-                                                                       && x.Expression.ArgumentList.Arguments.Any(y => IsSuitableDeclaredField(z, y)))
-                                                            .Select(y => new DependencyField
-                                                            {
-                                                                FieldOrLocalVariable = y.Declaration,
-                                                                IsInjectedFromConstructor = true
-                                                            })
-                                                            .Select(y => new TreeNode<DependencyField>(y))
-                                                           .ToArray()
-                })
-                .Where(x => x.InjectedFields.Any())
-                .ToArray();
 
-            //if (!fillImplicitDependencies) return suts;
-
-            var implicitDependencies = GetTestInitSetups(testInitMethodDecl, declaredFields);
-
-            var allInjectedFields = suts.SelectMany(sutInfo => sutInfo.InjectedFields);
-
-            foreach (var field in allInjectedFields)
-            {
-                FillSetupsTree(field, field, implicitDependencies);
-            }
-
-            return suts;
-        }
-
-        public static IReadOnlyCollection<SutInfo> GetSuts1(this SutCreationContext context,
+        public static IReadOnlyCollection<SutInfo> GetSuts(this SutCreationContext context,
             SemanticModel semanticModel,
             IReadOnlyCollection<FieldDeclarationSyntax> declaredFields)
         {
@@ -321,25 +276,25 @@ namespace MockIt
                     SymbolInfo = x.SymbolInfo,
                     Identifier = ((VariableDeclarationSyntax)x.Expression.Parents(n => n is VariableDeclarationSyntax))?.Variables.FirstOrDefault()?.Identifier ?? x.Expression.Parent?.DescendantNodes().OfType<IdentifierNameSyntax>().Select(i => i.Identifier).FirstOrDefault(),
                     SemanticModel = GetSutSemanticModel(semanticModel, x.SymbolInfo.Symbol, x.SymbolInfo.Symbol?.Locations.First()),
-                    //explicitly declared fields
-                    InjectedFields = declaredFields.Select(d => d.Declaration).Concat(context.DeclaredVariables.Select(v => v.Declaration)).Where(z => x.Expression.ArgumentList != null
+                    //explicitly declared fields or variables
+                    InjectedDependencies = declaredFields.Select(d => d.Declaration).Concat(context.DeclaredVariables.Select(v => v.Declaration)).Where(z => x.Expression.ArgumentList != null
                                                                        && x.Expression.ArgumentList.Arguments.Any(y => IsSuitableDeclaredVariable(z, y)))
-                                                            .Select(y => new DependencyField
+                                                            .Select(y => new Dependency
                                                             {
                                                                 FieldOrLocalVariable = y,
                                                                 IsInjectedFromConstructor = true
                                                             })
-                                                            .Select(y => new TreeNode<DependencyField>(y))
+                                                            .Select(y => new TreeNode<Dependency>(y))
                                                            .ToArray()
                 })
-                .Where(x => x.InjectedFields.Any())
+                .Where(x => x.InjectedDependencies.Any())
                 .ToArray();
 
             //if (!fillImplicitDependencies) return suts;
 
             var implicitDependencies = GetTestInitSetups(context.MethodSyntax, declaredFields);
 
-            var allInjectedFields = suts.SelectMany(sutInfo => sutInfo.InjectedFields);
+            var allInjectedFields = suts.SelectMany(sutInfo => sutInfo.InjectedDependencies);
 
             foreach (var field in allInjectedFields)
             {
@@ -362,37 +317,37 @@ namespace MockIt
                 .Select(x => new SetupsInfo
                 {
                     Expression = x.Expression,
-                    ParentField = declaredFields.FirstOrDefault(y => y.Declaration.Variables.Any(z => z.Identifier.Text == x.Match.Groups[1].Value.Trim()))?.Declaration,
+                    ParentFieldOrVariable = declaredFields.FirstOrDefault(y => y.Declaration.Variables.Any(z => z.Identifier.Text == x.Match.Groups[1].Value.Trim()))?.Declaration,
                     SetupIdentifierNode = x.Expression.DescendantNodes().OfType<MemberAccessExpressionSyntax>().FirstOrDefault(y => x.Match.Groups[4].Value.Trim() == y.Name.ToString() || x.Match.Groups[4].Value.Trim().StartsWith(y.Name + "(")),
-                    ReturnsField = declaredFields.FirstOrDefault(y => y.Declaration.Variables.Any(z => z.Identifier.Text == x.Match.Groups[7].Value.Trim()))?.Declaration,
+                    ReturnsFieldOrVariable = declaredFields.FirstOrDefault(y => y.Declaration.Variables.Any(z => z.Identifier.Text == x.Match.Groups[7].Value.Trim()))?.Declaration,
                 })
                 .ToArray();
 
             return result;
         }
 
-        private static void FillSetupsTree(TreeNode<DependencyField> rootFieldSyntax, TreeNode<DependencyField> parentFieldSyntax, IReadOnlyCollection<SetupsInfo> setupsInfos)
+        private static void FillSetupsTree(TreeNode<Dependency> rootDependencySyntax, TreeNode<Dependency> parentDependencySyntax, IReadOnlyCollection<SetupsInfo> setupsInfos)
         {
-            var fieldSetups = setupsInfos.Where(x => x.ParentField == parentFieldSyntax.Data.FieldOrLocalVariable).Select(x => new DependencyField
+            var fieldSetups = setupsInfos.Where(x => x.ParentFieldOrVariable == parentDependencySyntax.Data.FieldOrLocalVariable).Select(x => new Dependency
             {
-                FieldOrLocalVariable = x.ReturnsField,
+                FieldOrLocalVariable = x.ReturnsFieldOrVariable,
                 IsInjectedFromConstructor = false,
                 SetupExpression = x.Expression,
                 SetupIdentifierNode = x.SetupIdentifierNode
             }).ToArray();
 
-            var addedSetups = new List<TreeNode<DependencyField>>();
+            var addedSetups = new List<TreeNode<Dependency>>();
 
             foreach (var setup in fieldSetups)
             {
-                if (rootFieldSyntax.FindTreeNode(y => Equals(y.Data, setup)) != default) continue;
+                if (rootDependencySyntax.FindTreeNode(y => Equals(y.Data, setup)) != default) continue;
 
-                addedSetups.Add(parentFieldSyntax.AddChild(setup));
+                addedSetups.Add(parentDependencySyntax.AddChild(setup));
             }
 
             foreach (var nodeFromDependency in addedSetups)
             {
-                FillSetupsTree(rootFieldSyntax, nodeFromDependency, setupsInfos);
+                FillSetupsTree(rootDependencySyntax, nodeFromDependency, setupsInfos);
             }
         }
 

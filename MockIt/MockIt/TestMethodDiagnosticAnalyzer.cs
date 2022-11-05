@@ -73,7 +73,7 @@ namespace MockIt
 
                 //var suts = firstMethod.GetSuts(testSemanticModel, declaredFields, null, null);
                 //var ssuts = contextsWithDeclaredVariables.SelectMany(c => c.context.MethodSyntax.GetSuts(testSemanticModel, declaredFields, c.variables, c.context));
-                var suts = sutCreationContexts.Contexts.SelectMany(c => c.GetSuts1(testSemanticModel, sutCreationContexts.Fields)).ToArray();
+                var suts = sutCreationContexts.Contexts.SelectMany(c => c.GetSuts(testSemanticModel, sutCreationContexts.Fields)).ToArray();
 
                 var sutIdentifiers = suts.Select(x => x.Identifier?.Text).ToArray();
 

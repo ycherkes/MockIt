@@ -68,7 +68,7 @@ namespace MockIt
             if (sutCreationContext.Fields.Length == 0 && sutCreationContext.Contexts.All(x => x.DeclaredVariables.Length == 0))
                 return document;
 
-            var suts = sutCreationContext.Contexts.SelectMany(c => c.GetSuts1(testSemanticModel, sutCreationContext.Fields)).ToArray();
+            var suts = sutCreationContext.Contexts.SelectMany(c => c.GetSuts(testSemanticModel, sutCreationContext.Fields)).ToArray();
 
             var memberAccessExpressions = invocationSyntax.DescendantNodes()
                 .OfType<ExpressionSyntax>()

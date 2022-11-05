@@ -52,10 +52,11 @@ namespace MockIt
         {
             try
             {
-                var sutContexts = TestSemanticHelper.GetSutCreationContexts(semanticModel.SemanticModel);
+                var sutContext = TestSemanticHelper.GetSutCreationContextContainer(semanticModel.SemanticModel);
 
-                var locations = sutContexts.Select(x => new { location = GetDiagnosticLocation(semanticModel, x), x.ContextType })
-                    .Where(x => x.location != null);
+                var locations = sutContext.Contexts
+                                          .Select(x => new { location = GetDiagnosticLocation(semanticModel, x), x.ContextType })
+                                          .Where(x => x.location != null);
 
                 foreach (var location in locations)
                 {

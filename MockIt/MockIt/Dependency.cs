@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace MockIt
 {
-    public class DependencyField : IEquatable<DependencyField>
+    public class Dependency : IEquatable<Dependency>
     {
         public VariableDeclarationSyntax FieldOrLocalVariable { get; set; }
         public bool IsInjectedFromConstructor { get; set; }
@@ -13,14 +13,11 @@ namespace MockIt
 
         public GenericNameSyntax GetVariableOrFieldType()
         {
-            if (FieldOrLocalVariable.Type is GenericNameSyntax genericNameSyntax)
-            {
-                return genericNameSyntax;
-            }
-            return FieldOrLocalVariable.DescendantNodes().OfType<GenericNameSyntax>().FirstOrDefault();
+            return FieldOrLocalVariable.Type as GenericNameSyntax
+                    ?? FieldOrLocalVariable.DescendantNodes().OfType<GenericNameSyntax>().FirstOrDefault();
         }
 
-        public bool Equals(DependencyField other)
+        public bool Equals(Dependency other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
@@ -32,7 +29,7 @@ namespace MockIt
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((DependencyField)obj);
+            return Equals((Dependency)obj);
         }
 
         public override int GetHashCode()

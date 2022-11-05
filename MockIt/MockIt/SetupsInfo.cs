@@ -5,8 +5,8 @@ namespace MockIt
     public class SetupsInfo
     {
         public ExpressionStatementSyntax Expression { get; set; }
-        public VariableDeclarationSyntax ReturnsField { get; set; }
-        public VariableDeclarationSyntax ParentField { get; set; }
+        public VariableDeclarationSyntax ReturnsFieldOrVariable { get; set; }
+        public VariableDeclarationSyntax ParentFieldOrVariable { get; set; }
         public MemberAccessExpressionSyntax SetupIdentifierNode { get; set; }
     }
 }

@@ -91,7 +91,8 @@ namespace MockIt
 
             var changes = constructorParameters.MakeConstructorInjections(creationContext);
 
-            var changedDocument = await ChangesMaker.ApplyConstructorInjections(document, creation, cancellationToken, changes, creationExpressionSyntax, creationContext);
+            var changedDocument = await ChangesMaker.ApplyConstructorInjections(document, creation, cancellationToken, changes, creationExpressionSyntax, creationContext).ConfigureAwait(false);
+
             return changedDocument;
         }
     }

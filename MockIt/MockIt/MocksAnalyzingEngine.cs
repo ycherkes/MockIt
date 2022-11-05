@@ -20,7 +20,7 @@ namespace MockIt
             var identifier = memberAccessExpression.DescendantNodes().OfType<IdentifierNameSyntax>().FirstOrDefault()?.Identifier;
 
             suts = suts.Where(sutInfo => sutInfo.Identifier?.Text == identifier?.Text
-            && sutInfo.InjectedFields.Find(x => x.Data.FieldOrLocalVariable.Parent is FieldDeclarationSyntax || x.Data.FieldOrLocalVariable.Parents(y => y is MethodDeclarationSyntax) == memberAccessExpression.Parents(y => y is MethodDeclarationSyntax)).Any());
+            && sutInfo.InjectedDependencies.Find(x => x.Data.FieldOrLocalVariable.Parent is FieldDeclarationSyntax || x.Data.FieldOrLocalVariable.Parents(y => y is MethodDeclarationSyntax) == memberAccessExpression.Parents(y => y is MethodDeclarationSyntax)).Any());
 
             if (symbol == null) return Array.Empty<FieldOrLocalVariables>();
 
@@ -84,12 +84,12 @@ namespace MockIt
 
         private static Func<FieldOrLocalVariables, bool> HaveMissingSetups(SutInfo suitableSut)
         {
-            return syntax => !ExistsInSetups(syntax, suitableSut.InjectedFields);
+            return syntax => !ExistsInSetups(syntax, suitableSut.InjectedDependencies);
         }
 
-        private static bool ExistsInSetups(FieldOrLocalVariables fields, IEnumerable<TreeNode<DependencyField>> injectedFields)
+        private static bool ExistsInSetups(FieldOrLocalVariables fields, IEnumerable<TreeNode<Dependency>> injectedDependencies)
         {
-            return injectedFields.Any(x => x.FindTreeNodes(y => y.Parent != null
+            return injectedDependencies.Any(x => x.FindTreeNodes(y => y.Parent != null
                                                                 && IsMemberEquals(fields.MethodOrPropertySymbol, y.Data.SetupIdentifierNode?.Name)
                                                                 && fields.FieldOrLocalVariablesToSetup.Any(z => z.FieldOrLocalVariable.Any(w => y.Parent.Data.FieldOrLocalVariable.Variables.Any(t => t.Identifier.Text == w)))).Any());
         }
@@ -195,9 +195,9 @@ namespace MockIt
             ISymbol symbol,
             IImmutableDictionary<string, ITypeSymbol> sutSubstitutions)
         {
-            var suitableFields = suitableSut.InjectedFields.Find(IsSuitableField(semanticModel, symbol, sutSubstitutions));
+            var suitableDependencies = suitableSut.InjectedDependencies.Find(IsSuitableDependency(semanticModel, symbol, sutSubstitutions));
 
-            return suitableFields
+            return suitableDependencies
                 .Select(z =>
                 {
                     return new FieldOrLocalVariableSetups
@@ -213,13 +213,13 @@ namespace MockIt
                 }).ToArray();
         }
 
-        private static Func<TreeNode<DependencyField>, bool> IsSuitableField(SemanticModel semanticModel,
+        private static Func<TreeNode<Dependency>, bool> IsSuitableDependency(SemanticModel semanticModel,
             ISymbol symbol,
             IImmutableDictionary<string, ITypeSymbol> sutSubstitutions)
         {
             return z => z.Data.GetVariableOrFieldType()?.TypeArgumentList
-                                                                              .Arguments
-                                                                              .Any(y => IsSuitableType(semanticModel, y, symbol, sutSubstitutions)) ?? false;
+                                                        .Arguments
+                                                        .Any(y => IsSuitableType(semanticModel, y, symbol, sutSubstitutions)) ?? false;
         }
 
         private static bool IsSuitableType(SemanticModel semanticModel,

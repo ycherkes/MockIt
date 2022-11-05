@@ -136,6 +136,10 @@ namespace MockIt
                                     LiteralExpression(SyntaxKind.DefaultLiteralExpression,
                                                       Token(SyntaxKind.DefaultKeyword)));
         }
+        public static ExpressionSyntax WithCarriageReturnTrailingTrivia(this ExpressionSyntax expression)
+        {
+            return expression.WithTrailingTrivia(TriviaList(CarriageReturnLineFeed));
+        }
 
         public static TypeSyntax GetTypeSyntax(string typeIdentifier)
         {

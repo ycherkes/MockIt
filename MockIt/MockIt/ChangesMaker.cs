@@ -18,129 +18,136 @@ namespace MockIt
         {
             var verifiers = invokedMethodsOfMocks.SelectMany(x => x.FieldOrLocalVariablesToSetup.SelectMany(y => y.FieldOrLocalVariable))
                                                  .Distinct()
-                                                 .Select(x => SyntaxFactory.ExpressionStatement(SyntaxFactory.IdentifierName(x).Invoke("VerifyAll")))
+                                                 .Select(x => SyntaxFactory.IdentifierName(x).Invoke("VerifyAll").AsExpressionStatement())
                                                  .ToArray();
 
             return verifiers;
         }
 
-        private static ExpressionStatementSyntax[] GetSetups(IEnumerable<FieldOrLocalVariables> invokedMethodsOfMocks,
-            bool withCallBack)
+        private static ExpressionStatementSyntax[] GetSetups(IEnumerable<FieldOrLocalVariables> invokedMethodsOfMocks, bool withCallBack)
         {
             var setups = invokedMethodsOfMocks.SelectMany(x => x.FieldOrLocalVariablesToSetup
-                .SelectMany(y => y.FieldOrLocalVariable.Select(f => GetSetups(f, x, y, withCallBack))))
-                .SelectMany(x => x)
-                //.DistinctBy(x => x.ToFullString())
-                .DistinctBy(x => x, (st, nd) => SyntaxFactory.AreEquivalent(st, nd, false))
-                .Select(SyntaxFactory.ExpressionStatement)
-                .ToArray();
+                                              .SelectMany(y => y.FieldOrLocalVariable.Select(f => GetSetups(f, x, y, withCallBack))))
+                                              .SelectMany(x => x)
+                                              .DistinctBy(x => x, (first, second) => SyntaxFactory.AreEquivalent(first, second, false))
+                                              .Select(SyntaxFactory.ExpressionStatement)
+                                              .ToArray();
 
             return setups;
         }
 
-        private static IReadOnlyCollection<ExpressionSyntax> GetSetups(string identifier, FieldOrLocalVariables fields, FieldOrLocalVariableSetups fieldsSetups, bool withCallBack)
+        private static IReadOnlyCollection<ExpressionSyntax> GetSetups(string identifier, FieldOrLocalVariables fieldOrLocalVariables, FieldOrLocalVariableSetups fieldsSetups, bool withCallBack)
         {
-            if (fields.MethodOrPropertySymbol is IMethodSymbol methodSymbol)
+            if (fieldOrLocalVariables.MethodOrPropertySymbol is IMethodSymbol methodSymbol)
             {
-                //todo: determine the generic replacements correctly by semantic model from sut
+                var setupExpression = ComposeSetupExpression(identifier, fieldsSetups, withCallBack, methodSymbol);
 
-                var returnType = GetReplacedType(methodSymbol.ReturnType, fieldsSetups.Substitutions, fieldsSetups.SutSubstitutions);
-                bool isTaskReturnType = returnType == "Task";
-                bool isTaskResultReturnType = !isTaskReturnType && returnType.StartsWith("Task<");
-                var returnTaskTypeArgument = isTaskResultReturnType ? GetReplacedType(((INamedTypeSymbol)methodSymbol.ReturnType).TypeArguments.First(), fieldsSetups.Substitutions, fieldsSetups.SutSubstitutions) : "";
-
-                var (name, typeArguments) = GetMethod(methodSymbol, fieldsSetups.Substitutions, fieldsSetups.SutSubstitutions);
-
-                var lambdaArgument = SyntaxFactory.IdentifierName("x");
-
-                var setupBody = typeArguments.Length == 0
-                    ? lambdaArgument.Invoke(name)
-                    : lambdaArgument.InvokeGeneric(name, typeArguments.Select(z => SyntaxHelper.GetTypeSyntax(GetReplacedType(z, fieldsSetups.Substitutions, fieldsSetups.SutSubstitutions))).ToArray());
-
-                var itIdentifier = SyntaxFactory.IdentifierName("It");
-
-                var setupArguments = withCallBack
-                    ? methodSymbol.Parameters.Select(z => (ExpressionSyntax)itIdentifier.InvokeGeneric("IsAny", SyntaxHelper.GetTypeSyntax(GetReplacedType(z.Type, fieldsSetups.Substitutions, fieldsSetups.SutSubstitutions))))
-                                             .ToArray()
-                    : methodSymbol.Parameters.Select(z => (ExpressionSyntax)itIdentifier.InvokeGeneric("Is", SyntaxHelper.GetTypeSyntax(GetReplacedType(z.Type, fieldsSetups.Substitutions, fieldsSetups.SutSubstitutions)))
-                                                                                        .WithArguments(SyntaxHelper.SimpleLambdaExpression(z.Name)
-                                                                                                                   .WithExpressionBody(SyntaxHelper.EqualsDefaultExpression(z.Name))))
-                                             .ToArray();
-
-                var setupLambda = SyntaxHelper.SimpleLambdaExpression("x")
-                    .WithExpressionBody(setupBody.WithArguments(setupArguments));
-
-                var expression = SyntaxFactory.IdentifierName(identifier)
-                    .Invoke("Setup")
-                    .WithArgument(setupLambda);
-
-                if (withCallBack && methodSymbol.Parameters.Length > 0)
-                {
-                    var lambda = (methodSymbol.Parameters.Length == 1
-                        ? SyntaxHelper.SimpleLambdaExpression(methodSymbol.Parameters[0].Name)
-                        : SyntaxHelper.ParenthesizedLambdaExpression(methodSymbol.Parameters.Select(lp => lp.Name)))
-                        .WithBlock(SyntaxFactory.Block());
-
-                    expression = expression.WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed))
-                        .InvokeGeneric("Callback", methodSymbol.Parameters.Select(z => SyntaxHelper.GetTypeSyntax(GetReplacedType(z.Type, fieldsSetups.Substitutions, fieldsSetups.SutSubstitutions))).ToArray())
-                        .WithArgument(lambda);
-                }
-
-                if (methodSymbol.ReturnsVoid)
-                {
-                    return new ExpressionSyntax[] { expression };
-                }
-
-                if (isTaskResultReturnType)
-                {
-                    expression = expression.WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed))
-                                           .Invoke("ReturnsAsync")
-                                           .WithArgument(SyntaxFactory.DefaultExpression(SyntaxHelper.GetTypeSyntax(returnTaskTypeArgument)));
-                }
-                else if (isTaskReturnType)
-                {
-                    // ".Returns(Task.CompletedTask)" 
-                    expression = expression.WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed))
-                                           .Invoke("Returns")
-                                           .WithArgument(SyntaxFactory.IdentifierName("Task")
-                                                                      .MemberAccess("CompletedTask"));
-                }
-                else
-                {
-                    // ".Returns(default(" + returnType + "))"
-                    expression = expression.WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed))
-                                           .Invoke("Returns")
-                                           .WithArgument(SyntaxFactory.DefaultExpression(SyntaxHelper.GetTypeSyntax(returnType)));
-                }
-
-                return new ExpressionSyntax[] { expression };
+                return new[] { setupExpression };
             }
 
-            var propertySymbol = (IPropertySymbol)fields.MethodOrPropertySymbol;
+            var propertySymbol = (IPropertySymbol)fieldOrLocalVariables.MethodOrPropertySymbol;
 
             var expressions = new List<ExpressionSyntax>();
             var defaultType = SyntaxFactory.DefaultExpression(SyntaxHelper.GetTypeSyntax(GetReplacedType(propertySymbol.Type, fieldsSetups.Substitutions, fieldsSetups.SutSubstitutions)));
 
-            if (!propertySymbol.IsWriteOnly && !fields.Expression.IsLeftSideOfAssignExpression())
+            if (!propertySymbol.IsWriteOnly && !fieldOrLocalVariables.Expression.IsLeftSideOfAssignExpression())
             {
-                var setupBody = SyntaxFactory.IdentifierName("x").MemberAccess(propertySymbol.Name);
-
-                var setupLambda = SyntaxHelper.SimpleLambdaExpression("x")
-                    .WithExpressionBody(setupBody);
-
-                var getExpression = SyntaxFactory.IdentifierName(identifier)
-                                                 .Invoke("SetupGet")
-                                                 .WithArgument(setupLambda)
-                                                 .WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed))
-                                                 .Invoke("Returns")
-                                                 .WithArgument(defaultType);
+                var getExpression = ComposeSetupGetExpression(identifier, propertySymbol, defaultType);
 
                 expressions.Add(getExpression);
             }
 
-            if (propertySymbol.IsReadOnly || !fields.Expression.IsLeftSideOfAssignExpression())
+            if (propertySymbol.IsReadOnly || !fieldOrLocalVariables.Expression.IsLeftSideOfAssignExpression())
                 return expressions;
 
+            var setExpression = ComposeSetupSetExpression(identifier, defaultType);
+
+            expressions.Add(setExpression);
+
+            return expressions;
+        }
+
+        private static ExpressionSyntax ComposeSetupExpression(string identifier, FieldOrLocalVariableSetups fieldsSetups, bool withCallBack, IMethodSymbol methodSymbol)
+        {
+            //todo: determine the generic replacements correctly by semantic model from sut
+
+            var returnType = GetReplacedType(methodSymbol.ReturnType, fieldsSetups.Substitutions, fieldsSetups.SutSubstitutions);
+            bool isTaskReturnType = returnType == "Task";
+            bool isTaskResultReturnType = !isTaskReturnType && returnType.StartsWith("Task<");
+            var returnTaskTypeArgument = isTaskResultReturnType
+                ? GetReplacedType(((INamedTypeSymbol)methodSymbol.ReturnType).TypeArguments.First(), fieldsSetups.Substitutions, fieldsSetups.SutSubstitutions)
+                : "";
+
+            var (name, typeArguments) = GetMethod(methodSymbol, fieldsSetups.Substitutions, fieldsSetups.SutSubstitutions);
+
+            var lambdaArgument = SyntaxFactory.IdentifierName("x");
+
+            var setupBody = typeArguments.Length == 0
+                ? lambdaArgument.Invoke(name)
+                : lambdaArgument.InvokeGeneric(name,
+                    typeArguments.Select(z => SyntaxHelper.GetTypeSyntax(GetReplacedType(z, fieldsSetups.Substitutions, fieldsSetups.SutSubstitutions))).ToArray());
+
+            var itIdentifier = SyntaxFactory.IdentifierName("It");
+
+            var setupArguments = withCallBack
+                ? methodSymbol.Parameters.Select(z => (ExpressionSyntax)itIdentifier.InvokeGeneric("IsAny", SyntaxHelper.GetTypeSyntax(GetReplacedType(z.Type, fieldsSetups.Substitutions, fieldsSetups.SutSubstitutions)))).ToArray()
+                : methodSymbol.Parameters.Select(z => (ExpressionSyntax)itIdentifier.InvokeGeneric("Is",
+                                                                                        SyntaxHelper.GetTypeSyntax(GetReplacedType(z.Type, fieldsSetups.Substitutions, fieldsSetups.SutSubstitutions)))
+                                                                                                    .WithArguments(SyntaxHelper.SimpleLambdaExpression(z.Name)
+                                                                                                    .WithExpressionBody(SyntaxHelper.EqualsDefaultExpression(z.Name))))
+                                         .ToArray();
+
+            var setupLambda = SyntaxHelper.SimpleLambdaExpression("x")
+                                          .WithExpressionBody(setupBody.WithArguments(setupArguments));
+
+            ExpressionSyntax expression = SyntaxFactory.IdentifierName(identifier)
+                                                       .Invoke("Setup")
+                                                       .WithArgument(setupLambda);
+
+            if (withCallBack && methodSymbol.Parameters.Length > 0)
+            {
+                var lambda = (methodSymbol.Parameters.Length == 1
+                        ? SyntaxHelper.SimpleLambdaExpression(methodSymbol.Parameters[0].Name)
+                        : SyntaxHelper.ParenthesizedLambdaExpression(methodSymbol.Parameters.Select(lp => lp.Name)))
+                            .WithBlock(SyntaxFactory.Block());
+
+                expression = expression.WithCarriageReturnTrailingTrivia()
+                                       .InvokeGeneric("Callback", methodSymbol.Parameters.Select(z => SyntaxHelper.GetTypeSyntax(GetReplacedType(z.Type, fieldsSetups.Substitutions, fieldsSetups.SutSubstitutions))).ToArray())
+                                       .WithArgument(lambda);
+            }
+
+            if (methodSymbol.ReturnsVoid)
+            {
+                return expression;
+            }
+
+            if (isTaskResultReturnType)
+            {
+                expression = expression.WithCarriageReturnTrailingTrivia()
+                                       .Invoke("ReturnsAsync")
+                                       .WithArgument(SyntaxFactory.DefaultExpression(SyntaxHelper.GetTypeSyntax(returnTaskTypeArgument)));
+            }
+            else if (isTaskReturnType)
+            {
+                // ".Returns(Task.CompletedTask)" 
+                expression = expression.WithCarriageReturnTrailingTrivia()
+                                       .Invoke("Returns")
+                                       .WithArgument(SyntaxFactory.IdentifierName("Task")
+                                       .MemberAccess("CompletedTask"));
+            }
+            else
+            {
+                // ".Returns(default(" + returnType + "))"
+                expression = expression.WithCarriageReturnTrailingTrivia()
+                                       .Invoke("Returns")
+                                       .WithArgument(SyntaxFactory.DefaultExpression(SyntaxHelper.GetTypeSyntax(returnType)));
+            }
+
+            return expression;
+        }
+
+        private static InvocationExpressionSyntax ComposeSetupSetExpression(string identifier, DefaultExpressionSyntax defaultType)
+        {
             var setupSetBody = SyntaxFactory.IdentifierName("x")
                                             .MemberAccess(identifier)
                                             .SimpleAssignTo(defaultType);
@@ -152,9 +159,25 @@ namespace MockIt
                                              .Invoke("SetupSet")
                                              .WithArgument(setupSetLambda);
 
-            expressions.Add(setExpression);
+            return setExpression;
+        }
 
-            return expressions;
+        private static InvocationExpressionSyntax ComposeSetupGetExpression(string identifier, IPropertySymbol propertySymbol, DefaultExpressionSyntax defaultType)
+        {
+            var setupBody = SyntaxFactory.IdentifierName("x")
+                                         .MemberAccess(propertySymbol.Name);
+
+            var setupLambda = SyntaxHelper.SimpleLambdaExpression("x")
+                                          .WithExpressionBody(setupBody);
+
+            var getExpression = SyntaxFactory.IdentifierName(identifier)
+                                             .Invoke("SetupGet")
+                                             .WithArgument(setupLambda)
+                                             .WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed))
+                                             .Invoke("Returns")
+                                             .WithArgument(defaultType);
+
+            return getExpression;
         }
 
         private static string GetReplacedType(ITypeSymbol typeSymbol,
@@ -209,10 +232,10 @@ namespace MockIt
             var verifiers = GetVerifiers(invokedMethodsOfMocks);
 
             editor.InsertBefore(invocationSyntax, setups.Select(x => x.WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed, SyntaxFactory.CarriageReturnLineFeed))
-                         .WithAdditionalAnnotations(Formatter.Annotation)));
+                                                                      .WithAdditionalAnnotations(Formatter.Annotation)));
 
             editor.InsertAfter(invocationSyntax, verifiers.Select(x => x.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed))
-                            .WithAdditionalAnnotations(Formatter.Annotation)));
+                                                                        .WithAdditionalAnnotations(Formatter.Annotation)));
         }
 
         public static ConstructorInjections[] MakeConstructorInjections(
@@ -254,16 +277,16 @@ namespace MockIt
             {
 
                 NewExpression = SyntaxHelper.VarTypeSyntax()
-                                    .AsVariableDeclaration()
-                                    .WithVariable(SyntaxFactory.Identifier("mock" + FirstCharToUpper(x.ArgumentName))
-                                                               .AsVariableDeclarator()
-                                                               .WithInitializer(
-                                                                   SyntaxFactory.EqualsValueClause(
-                                                                       SyntaxFactory.Identifier("Mock")
-                                                                                    .AsGeneric()
-                                                                                    .WithTypeArgument(x.TypeName)
-                                                                                    .AsObjectCreationExpressionWithoutArguments())))
-                                    .AsLocalDeclarationStatement(),
+                                            .AsVariableDeclaration()
+                                            .WithVariable(SyntaxFactory.Identifier("mock" + FirstCharToUpper(x.ArgumentName))
+                                                                       .AsVariableDeclarator()
+                                                                       .WithInitializer(
+                                                                           SyntaxFactory.EqualsValueClause(
+                                                                               SyntaxFactory.Identifier("Mock")
+                                                                                            .AsGeneric()
+                                                                                            .WithTypeArgument(x.TypeName)
+                                                                                            .AsObjectCreationExpressionWithoutArguments())))
+                                            .AsLocalDeclarationStatement(),
 
                 CreationArgument = SyntaxFactory.IdentifierName("mock" + FirstCharToUpper(x.ArgumentName))
                                                 .MemberAccess("Object")
