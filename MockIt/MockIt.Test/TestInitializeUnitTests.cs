@@ -495,13 +495,12 @@ namespace MockIt.Test
                 public class UnitTest2
                 {
                     private IService sut;
-        private Mock<ISubService> subServiceMock;
+        private readonly Mock<ISubService> _mockSubService;
 
         public UnitTest2()
                     {
-            subServiceMock = new Mock<ISubService>();
-
-            sut = new Service(subServiceMock.Object);
+            _mockSubService = new Mock<ISubService>();
+            sut = new Service(_mockSubService.Object);
                     }
             
                     [Fact]
