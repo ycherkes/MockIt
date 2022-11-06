@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
-namespace MockIt
+namespace MockIt.Syntax
 {
     internal static class SyntaxHelper
     {
@@ -20,11 +20,6 @@ namespace MockIt
         public static MemberAccessExpressionSyntax MemberAccess(this ExpressionSyntax owner, string memberName)
         {
             return MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, owner, IdentifierName(memberName));
-        }
-
-        public static MemberAccessExpressionSyntax Field(this ExpressionSyntax identifier, string memberName)
-        {
-            return MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, identifier, IdentifierName(memberName));
         }
 
         public static InvocationExpressionSyntax Invoke(this ExpressionSyntax owner, string memberName)

@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace MockIt
+namespace MockIt.Model
 {
     public class SetupsInfo
     {

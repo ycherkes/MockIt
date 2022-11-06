@@ -2,7 +2,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Linq;
 
-namespace MockIt
+namespace MockIt.Model
 {
     public class Dependency : IEquatable<Dependency>
     {
@@ -37,9 +37,9 @@ namespace MockIt
             unchecked
             {
                 var hashCode = FieldOrLocalVariable != null ? FieldOrLocalVariable.GetHashCode() : 0;
-                hashCode = (hashCode * 397) ^ IsInjectedFromConstructor.GetHashCode();
-                hashCode = (hashCode * 397) ^ (SetupExpression != null ? SetupExpression.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (SetupIdentifierNode != null ? SetupIdentifierNode.GetHashCode() : 0);
+                hashCode = hashCode * 397 ^ IsInjectedFromConstructor.GetHashCode();
+                hashCode = hashCode * 397 ^ (SetupExpression != null ? SetupExpression.GetHashCode() : 0);
+                hashCode = hashCode * 397 ^ (SetupIdentifierNode != null ? SetupIdentifierNode.GetHashCode() : 0);
                 return hashCode;
             }
         }

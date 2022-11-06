@@ -1,6 +1,8 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using MockIt.Model;
+using MockIt.Syntax;
 using MockIt.ThirdParty;
 using System;
 using System.Collections.Generic;
@@ -20,7 +22,7 @@ namespace MockIt
             var identifier = memberAccessExpression.DescendantNodes().OfType<IdentifierNameSyntax>().FirstOrDefault()?.Identifier;
 
             suts = suts.Where(sutInfo => sutInfo.Identifier?.Text == identifier?.Text
-            && sutInfo.InjectedDependencies.Find(x => x.Data.FieldOrLocalVariable.Parent is FieldDeclarationSyntax || x.Data.FieldOrLocalVariable.Parents(y => y is MethodDeclarationSyntax) == memberAccessExpression.Parents(y => y is MethodDeclarationSyntax)).Any());
+            && sutInfo.InjectedDependencies.Find(x => x.Data.FieldOrLocalVariable.Parent is FieldDeclarationSyntax || x.Data.FieldOrLocalVariable.FirstAncestorOrSelf<SyntaxNode>(y => y is MethodDeclarationSyntax) == memberAccessExpression.FirstAncestorOrSelf<SyntaxNode>(y => y is MethodDeclarationSyntax)).Any());
 
             if (symbol == null) return Array.Empty<FieldOrLocalVariables>();
 
@@ -64,7 +66,7 @@ namespace MockIt
                 var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(allNodes, methods, isLeftSideOfAssignExpression).ToArray();
 
                 allSyntax.AddRange(methods.Concat(properties).Distinct());
-                allSyntax = allSyntax.Distinct().ToList();
+                allSyntax = allSyntax.DistinctBy(x => x, (first, second) => SyntaxFactory.AreEquivalent(first, second, false)).ToList();
 
                 allNodes = allSyntax.SelectMany(syn => syn.DescendantNodesAndSelf().Where(x => !x.Span.IsEmpty))
                                     .SelectMany(x => GetReferencedNodes(x, suitableSut))
@@ -89,9 +91,9 @@ namespace MockIt
 
         private static bool ExistsInSetups(FieldOrLocalVariables fields, IEnumerable<TreeNode<Dependency>> injectedDependencies)
         {
-            return injectedDependencies.Any(x => x.FindTreeNodes(y => y.Parent != null
+            return injectedDependencies.Any(x => x.FindTreeNodes(y => !y.IsRoot
                                                                 && IsMemberEquals(fields.MethodOrPropertySymbol, y.Data.SetupIdentifierNode?.Name)
-                                                                && fields.FieldOrLocalVariablesToSetup.Any(z => z.FieldOrLocalVariable.Any(w => y.Parent.Data.FieldOrLocalVariable.Variables.Any(t => t.Identifier.Text == w)))).Any());
+                                                                && fields.FieldOrLocalVariablesToSetup.Any(z => z.FieldOrLocalVariableName.Any(w => y.Parent.Data.FieldOrLocalVariable.Variables.Any(t => t.Identifier.Text == w)))).Any());
         }
 
         private static IEnumerable<SyntaxNode> GetReferencedNodes(SyntaxNode node, SutInfo sutInfo)
@@ -160,7 +162,7 @@ namespace MockIt
             SemanticModel semanticModel,
             IImmutableDictionary<string, ITypeSymbol> sutSubstitutions)
         {
-            var syntax = expression.Parents(x => (x as UsingStatementSyntax)?.Declaration
+            var syntax = expression.FirstAncestorOrSelf<SyntaxNode>(x => (x as UsingStatementSyntax)?.Declaration
                                                                              ?.Variables
                                                                              .Any(y => y.DescendantNodes()
                                                                                         .Any(z => z == expression)) == true) as UsingStatementSyntax;
@@ -202,7 +204,7 @@ namespace MockIt
                 {
                     return new FieldOrLocalVariableSetups
                     {
-                        FieldOrLocalVariable = z.Data.FieldOrLocalVariable.Variables.Select(f => f.Identifier.ValueText),
+                        FieldOrLocalVariableName = z.Data.FieldOrLocalVariable.Variables.Select(f => f.Identifier.ValueText),
                         Substitutions = z.Data.GetVariableOrFieldType()?.TypeArgumentList
                             .Arguments
                             .Select(y => GetSubstitutions(semanticModel, y))

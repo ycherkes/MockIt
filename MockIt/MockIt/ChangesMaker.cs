@@ -3,6 +3,8 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
 using Microsoft.CodeAnalysis.Formatting;
+using MockIt.Model;
+using MockIt.Syntax;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -16,7 +18,7 @@ namespace MockIt
     {
         private static IEnumerable<ExpressionStatementSyntax> GetVerifiers(IEnumerable<FieldOrLocalVariables> invokedMethodsOfMocks)
         {
-            var verifiers = invokedMethodsOfMocks.SelectMany(x => x.FieldOrLocalVariablesToSetup.SelectMany(y => y.FieldOrLocalVariable))
+            var verifiers = invokedMethodsOfMocks.SelectMany(x => x.FieldOrLocalVariablesToSetup.SelectMany(y => y.FieldOrLocalVariableName))
                                                  .Distinct()
                                                  .Select(x => SyntaxFactory.IdentifierName(x).Invoke("VerifyAll").AsExpressionStatement())
                                                  .ToArray();
@@ -27,7 +29,7 @@ namespace MockIt
         private static ExpressionStatementSyntax[] GetSetups(IEnumerable<FieldOrLocalVariables> invokedMethodsOfMocks, bool withCallBack)
         {
             var setups = invokedMethodsOfMocks.SelectMany(x => x.FieldOrLocalVariablesToSetup
-                                              .SelectMany(y => y.FieldOrLocalVariable.Select(f => GetSetups(f, x, y, withCallBack))))
+                                              .SelectMany(y => y.FieldOrLocalVariableName.Select(f => GetSetups(f, x, y, withCallBack))))
                                               .SelectMany(x => x)
                                               .DistinctBy(x => x, (first, second) => SyntaxFactory.AreEquivalent(first, second, false))
                                               .Select(SyntaxFactory.ExpressionStatement)

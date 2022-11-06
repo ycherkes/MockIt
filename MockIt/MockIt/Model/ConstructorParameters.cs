@@ -1,4 +1,4 @@
-namespace MockIt
+namespace MockIt.Model
 {
     public class ConstructorParameters
     {

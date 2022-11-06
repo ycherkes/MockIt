@@ -12,14 +12,14 @@ namespace MockIt
             return items.GroupBy(property).Select(x => x.First());
         }
 
-        public static IEnumerable<T> DistinctBy<T, TKey>(this IEnumerable<T> items, Func<T, TKey> property, IEqualityComparer<TKey> comparer)
+        private static IEnumerable<T> DistinctBy<T, TKey>(this IEnumerable<T> items, Func<T, TKey> property, IEqualityComparer<TKey> comparer)
         {
             return items.GroupBy(property, comparer).Select(x => x.First());
         }
 
         public static IEnumerable<T> DistinctBy<T, TKey>(this IEnumerable<T> items, Func<T, TKey> property, Func<TKey, TKey, bool> comparer)
         {
-            return items.GroupBy(property, new EqualityComparer<TKey>(comparer)).Select(x => x.First());
+            return items.DistinctBy(property, new EqualityComparer<TKey>(comparer));
         }
 
         public static IEnumerable<TreeNode<T>> Find<T>(this IEnumerable<TreeNode<T>> items, Func<TreeNode<T>, bool> predicate) where T : IEquatable<T>

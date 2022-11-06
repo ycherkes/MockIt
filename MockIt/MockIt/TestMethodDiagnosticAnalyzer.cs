@@ -84,7 +84,7 @@ namespace MockIt
                     Syntax = expressionSyntax,
                     ToBeMocked = !IsNotExpressionNeedsToMock((await MocksAnalyzingEngine.GetInvokedMethodsOfMock(expressionSyntax, testSemanticModel, suts))
                                                                                         .SelectMany(x => x.FieldOrLocalVariablesToSetup
-                                                                                                          .SelectMany(y => y.FieldOrLocalVariable))
+                                                                                                          .SelectMany(y => y.FieldOrLocalVariableName))
                                                                                         .Distinct()
                                                                                         .ToArray(),
                                                              expressionSyntax)
@@ -107,7 +107,7 @@ namespace MockIt
         private static bool IsNotExpressionNeedsToMock(IReadOnlyCollection<string> mocksInvocations, SyntaxNode expression)
         {
             return mocksInvocations.Count == 0
-                    || expression.Parents(n => n is MethodDeclarationSyntax || n is ConstructorDeclarationSyntax)
+                    || expression.FirstAncestorOrSelf<SyntaxNode>(n => n is MethodDeclarationSyntax || n is ConstructorDeclarationSyntax)
                                   ?.DescendantNodes()
                                   .OfType<InvocationExpressionSyntax>()
                                   .Select(x => x.ToString())

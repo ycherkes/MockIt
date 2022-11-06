@@ -1,7 +1,7 @@
 ﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 
-namespace MockIt
+namespace MockIt.Model
 {
     public class SutCreationContextContainer
     {

@@ -12,15 +12,19 @@ namespace TestProject
             _sut = new Class1<List<string>, Dictionary<int, string>>();
         }
 
-        public void Foo()
+        private Class1<List<string>, Dictionary<int, string>> CreateSut()
         {
             var sut = new Class1<List<string>, Dictionary<int, string>>();
+
+            return sut;
         }
 
         [Fact]
         public void TestMethod()
         {
-            var prop = _sut.PropertyFoo;
+            var sut = new Class1<List<string>, Dictionary<int, string>>();
+
+            var prop = sut.PropertyFoo;
         }
 
         [Fact]

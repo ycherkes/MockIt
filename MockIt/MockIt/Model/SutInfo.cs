@@ -2,7 +2,7 @@ using Microsoft.CodeAnalysis;
 using MockIt.ThirdParty;
 using System.Collections.Generic;
 
-namespace MockIt
+namespace MockIt.Model
 {
     public class SutInfo
     {

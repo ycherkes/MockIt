@@ -8,7 +8,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <PackageId>MockIt</PackageId>
-    <PackageVersion>1.0.0.25</PackageVersion>
+    <PackageVersion>0.0.0.1</PackageVersion>
     <Authors>DELL</Authors>
     <PackageLicenseUrl>http://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
     <PackageProjectUrl>http://www.apache.org/licenses/LICENSE-2.0</PackageProjectUrl>
