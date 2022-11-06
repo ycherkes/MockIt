@@ -71,8 +71,6 @@ namespace MockIt
 
                 if (sutCreationContexts.Fields.Length == 0 && sutCreationContexts.Contexts.All(x => x.DeclaredVariables.Length == 0)) return;
 
-                //var suts = firstMethod.GetSuts(testSemanticModel, declaredFields, null, null);
-                //var ssuts = contextsWithDeclaredVariables.SelectMany(c => c.context.MethodSyntax.GetSuts(testSemanticModel, declaredFields, c.variables, c.context));
                 var suts = sutCreationContexts.Contexts.SelectMany(c => c.GetSuts(testSemanticModel, sutCreationContexts.Fields)).ToArray();
 
                 var sutIdentifiers = suts.Select(x => x.Identifier?.Text).ToArray();
@@ -109,7 +107,7 @@ namespace MockIt
         private static bool IsNotExpressionNeedsToMock(IReadOnlyCollection<string> mocksInvocations, SyntaxNode expression)
         {
             return mocksInvocations.Count == 0
-                    || expression.Parents(n => n is BlockSyntax)
+                    || expression.Parents(n => n is MethodDeclarationSyntax || n is ConstructorDeclarationSyntax)
                                   ?.DescendantNodes()
                                   .OfType<InvocationExpressionSyntax>()
                                   .Select(x => x.ToString())

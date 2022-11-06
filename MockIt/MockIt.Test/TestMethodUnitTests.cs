@@ -154,6 +154,75 @@ namespace MockIt.Test
             VerifyCSharpFix(test, fixtest);
         }
 
+        [TestMethod]
+        public void TestSetupWithoutReturnsNoDiagnosticsInCodeBlock()
+        {
+            var test = @"
+            using Microsoft.VisualStudio.TestTools.UnitTesting;
+            using TestMockProjectTest;
+            
+            namespace TestMockUnitTests
+            {
+                [TestClass]
+                public class UnitTest2
+                {
+                    private IService sut;
+                    private Mock<ISubService> subServiceMock;
+
+                    [TestInitialize]
+                    public void Init()
+                    {
+                        subServiceMock = new Mock<ISubService>();
+                        sut = new Service(subServiceMock.Object);
+                    }
+            
+                    [TestMethod]
+                    public void TestMethod1()
+                    {
+                         subServiceMock.Setup(x => x.DoSubSomething(It.IsAny<int>()))
+                                       .Callback<int>(doInt => { });
+              
+                         { 
+                              sut.DoSomething(2); 
+                         }
+
+                         subServiceMock.VerifyAll();
+                    }
+                }
+            }
+            
+            namespace TestMockProjectTest
+            {
+            
+                public interface IService
+                {
+                    void DoSomething(int doInt);
+                }
+            
+                public interface ISubService
+                {
+                    void DoSubSomething(int doInt);
+                }
+            
+                public class Service : IService
+                {
+                    private readonly ISubService _subService;
+            
+                    public Service(ISubService subService)
+                    {
+                        _subService = subService;
+                    }
+            
+                    public void DoSomething(int doInt)
+                    {
+                        _subService.DoSubSomething(doInt);
+                    }
+                }
+            };";
+
+            VerifyCSharpDiagnostic(test, Array.Empty<DiagnosticResult>());
+        }
+
 
         [TestMethod]
         public void TestSetupWithReturns()
