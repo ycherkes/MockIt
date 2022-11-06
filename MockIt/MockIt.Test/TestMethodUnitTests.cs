@@ -225,7 +225,7 @@ namespace MockIt.Test
 
 
         [TestMethod]
-        public void TestSetupWithReturns()
+        public void TestSetupWithReturns_SetupFieldsInTestMethod()
         {
             var test = @"
             using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -250,14 +250,6 @@ namespace MockIt.Test
                     public void TestMethod1()
                     {
                         _sut.DoSomething(2);
-                    }
-
-                    [TestMethod]
-                    public void TestMethod2()
-                    {
-                        var subServiceMock = new Mock<ISubService>();
-                        var sut = new Service(subServiceMock.Object);
-                        sut.DoSomething(2);
                     }
                 }
             }
@@ -321,9 +313,122 @@ namespace MockIt.Test
 
             _subServiceMock.VerifyAll();
         }
+                }
+            }
+            
+            namespace TestMockProjectTest
+            {
+            
+                public interface IService
+                {
+                    bool DoSomething(int doInt);
+                }
+            
+                public interface ISubService
+                {
+                    Task<bool> DoSubSomething(int doInt);
+                }
+            
+                public class Service : IService
+                {
+                    private readonly ISubService _subService;
+            
+                    public Service(ISubService subService)
+                    {
+                        _subService = subService;
+                    }
+            
+                    public bool DoSomething(int doInt)
+                    {
+                        return _subService.DoSubSomething(doInt);
+                    }
+                }
+            }";
+            VerifyCSharpFix(test, fixtest);
+        }
 
+        [TestMethod]
+        public void TestSetupWithReturns_SetupVariablesInTestMethod()
+        {
+            var test = @"
+            using Microsoft.VisualStudio.TestTools.UnitTesting;
+            using TestMockProjectTest;
+            
+            namespace TestMockUnitTests
+            {
+                [TestClass]
+                public class UnitTest2
+                {
+                    private IService _sut;
+                    private Mock<ISubService> _subServiceMock;
+
+                    [TestInitialize]
+                    public void Init()
+                    {
+                         _subServiceMock = new Mock<ISubService>();
+                         _sut = new Service(_subServiceMock.Object);
+                    }
+            
                     [TestMethod]
-                    public void TestMethod2()
+                    public void TestMethod()
+                    {
+                        var subServiceMock = new Mock<ISubService>();
+                        var sut = new Service(subServiceMock.Object);
+                        sut.DoSomething(2);
+                    }
+                }
+            }
+            
+            namespace TestMockProjectTest
+            {
+            
+                public interface IService
+                {
+                    bool DoSomething(int doInt);
+                }
+            
+                public interface ISubService
+                {
+                    Task<bool> DoSubSomething(int doInt);
+                }
+            
+                public class Service : IService
+                {
+                    private readonly ISubService _subService;
+            
+                    public Service(ISubService subService)
+                    {
+                        _subService = subService;
+                    }
+            
+                    public bool DoSomething(int doInt)
+                    {
+                        return _subService.DoSubSomething(doInt);
+                    }
+                }
+            }";
+
+            var fixtest = @"
+            using Microsoft.VisualStudio.TestTools.UnitTesting;
+            using TestMockProjectTest;
+            
+            namespace TestMockUnitTests
+            {
+                [TestClass]
+                public class UnitTest2
+                {
+                    private IService _sut;
+                    private Mock<ISubService> _subServiceMock;
+
+                    [TestInitialize]
+                    public void Init()
+                    {
+                         _subServiceMock = new Mock<ISubService>();
+                         _sut = new Service(_subServiceMock.Object);
+                    }
+            
+                    [TestMethod]
+                    public void TestMethod()
                     {
                         var subServiceMock = new Mock<ISubService>();
                         var sut = new Service(subServiceMock.Object);
@@ -370,7 +475,134 @@ namespace MockIt.Test
         }
 
         [TestMethod]
-        public void TestCreateMockChainOfCalls()
+        public void TestSetupWithReturns_SetupVariablesInNonTestMethod()
+        {
+            var test = @"
+            using Microsoft.VisualStudio.TestTools.UnitTesting;
+            using TestMockProjectTest;
+            
+            namespace TestMockUnitTests
+            {
+                [TestClass]
+                public class UnitTest2
+                {
+                    private IService _sut;
+                    private Mock<ISubService> _subServiceMock;
+
+                    [TestInitialize]
+                    public void Init()
+                    {
+                         _subServiceMock = new Mock<ISubService>();
+                         _sut = new Service(_subServiceMock.Object);
+                    }
+            
+                    [TestMethod]
+                    public void NonTestMethod()
+                    {
+                        var subServiceMock = new Mock<ISubService>();
+                        var sut = new Service(subServiceMock.Object);
+                        sut.DoSomething(2);
+                    }
+                }
+            }
+            
+            namespace TestMockProjectTest
+            {
+            
+                public interface IService
+                {
+                    bool DoSomething(int doInt);
+                }
+            
+                public interface ISubService
+                {
+                    Task<bool> DoSubSomething(int doInt);
+                }
+            
+                public class Service : IService
+                {
+                    private readonly ISubService _subService;
+            
+                    public Service(ISubService subService)
+                    {
+                        _subService = subService;
+                    }
+            
+                    public bool DoSomething(int doInt)
+                    {
+                        return _subService.DoSubSomething(doInt);
+                    }
+                }
+            }";
+
+            var fixtest = @"
+            using Microsoft.VisualStudio.TestTools.UnitTesting;
+            using TestMockProjectTest;
+            
+            namespace TestMockUnitTests
+            {
+                [TestClass]
+                public class UnitTest2
+                {
+                    private IService _sut;
+                    private Mock<ISubService> _subServiceMock;
+
+                    [TestInitialize]
+                    public void Init()
+                    {
+                         _subServiceMock = new Mock<ISubService>();
+                         _sut = new Service(_subServiceMock.Object);
+                    }
+            
+                    [TestMethod]
+                    public void NonTestMethod()
+                    {
+                        var subServiceMock = new Mock<ISubService>();
+                        var sut = new Service(subServiceMock.Object);
+            subServiceMock.Setup(x => x.DoSubSomething(It.IsAny<int>()))
+            .Callback<int>(doInt => { })
+            .ReturnsAsync(default(bool));
+
+            sut.DoSomething(2);
+
+            subServiceMock.VerifyAll();
+        }
+                }
+            }
+            
+            namespace TestMockProjectTest
+            {
+            
+                public interface IService
+                {
+                    bool DoSomething(int doInt);
+                }
+            
+                public interface ISubService
+                {
+                    Task<bool> DoSubSomething(int doInt);
+                }
+            
+                public class Service : IService
+                {
+                    private readonly ISubService _subService;
+            
+                    public Service(ISubService subService)
+                    {
+                        _subService = subService;
+                    }
+            
+                    public bool DoSomething(int doInt)
+                    {
+                        return _subService.DoSubSomething(doInt);
+                    }
+                }
+            }";
+            VerifyCSharpFix(test, fixtest);
+        }
+
+        [TestMethod]
+        public void TestShouldNotGoToEndlessCycleWhenMockReturnsItsClass_ChainOfMocks()
         {
             var test = @"
             using Microsoft.VisualStudio.TestTools.UnitTesting;
