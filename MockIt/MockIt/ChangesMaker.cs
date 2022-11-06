@@ -38,11 +38,11 @@ namespace MockIt
             return setups;
         }
 
-        private static IReadOnlyCollection<ExpressionSyntax> GetSetups(string identifier, FieldOrLocalVariables fieldOrLocalVariables, FieldOrLocalVariableSetups fieldsSetups, bool withCallBack)
+        private static IReadOnlyCollection<ExpressionSyntax> GetSetups(string identifier, FieldOrLocalVariables fieldOrLocalVariables, FieldOrLocalVariableSetups fieldOrLocalVariableSetups, bool withCallBack)
         {
             if (fieldOrLocalVariables.MethodOrPropertySymbol is IMethodSymbol methodSymbol)
             {
-                var setupExpression = ComposeSetupExpression(identifier, fieldsSetups, withCallBack, methodSymbol);
+                var setupExpression = ComposeSetupExpression(identifier, fieldOrLocalVariableSetups, withCallBack, methodSymbol);
 
                 return new[] { setupExpression };
             }
@@ -50,7 +50,7 @@ namespace MockIt
             var propertySymbol = (IPropertySymbol)fieldOrLocalVariables.MethodOrPropertySymbol;
 
             var expressions = new List<ExpressionSyntax>();
-            var defaultType = SyntaxFactory.DefaultExpression(SyntaxHelper.GetTypeSyntax(GetReplacedType(propertySymbol.Type, fieldsSetups.Substitutions, fieldsSetups.SutSubstitutions)));
+            var defaultType = SyntaxFactory.DefaultExpression(SyntaxHelper.GetTypeSyntax(GetReplacedType(propertySymbol.Type, fieldOrLocalVariableSetups.Substitutions, fieldOrLocalVariableSetups.SutSubstitutions)));
 
             if (!propertySymbol.IsWriteOnly && !fieldOrLocalVariables.Expression.IsLeftSideOfAssignExpression())
             {
