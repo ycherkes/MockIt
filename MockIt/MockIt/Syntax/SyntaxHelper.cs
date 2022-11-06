@@ -54,9 +54,9 @@ namespace MockIt.Syntax
             return LocalDeclarationStatement(declaration);
         }
 
-        public static ArgumentListSyntax AsArgumentList(this IEnumerable<SyntaxNodeOrToken> arguments)
+        public static ArgumentListSyntax AsArgumentList(this IEnumerable<ArgumentSyntax> arguments)
         {
-            return ArgumentList(SeparatedList<ArgumentSyntax>(arguments));
+            return ArgumentList(SeparatedList(arguments));
         }
 
         public static FieldDeclarationSyntax AsFieldDeclaration(this VariableDeclarationSyntax declaration)

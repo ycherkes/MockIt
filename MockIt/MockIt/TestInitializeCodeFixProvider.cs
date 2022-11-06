@@ -90,7 +90,7 @@ namespace MockIt
 
             var creationContext = (SutCreationContextType)Enum.Parse(typeof(SutCreationContextType), creationContextProperty);
 
-            var changes = constructorParameters.MakeConstructorInjections(creationContext);
+            var changes = constructorParameters.GetConstructorInjections(creationContext);
 
             var changedDocument = await ChangesMaker.ApplyConstructorInjections(document, creation, cancellationToken, changes, creationExpressionSyntax, creationContext).ConfigureAwait(false);
 

@@ -226,7 +226,7 @@ namespace MockIt
                     : typeSymbol;
         }
 
-        public static void ApplyChanges(SyntaxNode invocationSyntax,
+        public static void ApplyMethodCodeFixChanges(SyntaxNode invocationSyntax,
             SyntaxEditor editor,
             IReadOnlyCollection<FieldOrLocalVariables> invokedMethodsOfMocks, bool withCallBack)
         {
@@ -240,8 +240,7 @@ namespace MockIt
                                                                         .WithAdditionalAnnotations(Formatter.Annotation)));
         }
 
-        public static ConstructorInjections[] MakeConstructorInjections(
-            this IEnumerable<ConstructorParameters> constructorParameters, SutCreationContextType creationContext)
+        public static ConstructorInjections[] GetConstructorInjections(this IEnumerable<ConstructorParameters> constructorParameters, SutCreationContextType creationContext)
         {
             if (creationContext != SutCreationContextType.Method)
             {
@@ -258,18 +257,18 @@ namespace MockIt
                                             .AsGeneric()
                                             .WithTypeArgument(x.TypeName)
                                             .AsVariableDeclaration()
-                                            .WithVariable("_" + "mock" + FirstCharToUpper(x.ArgumentName))
+                                            .WithVariable("_" + "mock" + x.ArgumentName.FirstCharToUpperCase())
                                             .AsFieldDeclaration()
                                             .WithModifiers(modifiers),
 
-                    NewExpression = SyntaxFactory.IdentifierName("_" + "mock" + FirstCharToUpper(x.ArgumentName))
+                    NewExpression = SyntaxFactory.IdentifierName("_" + "mock" + x.ArgumentName.FirstCharToUpperCase())
                                                  .SimpleAssignTo(SyntaxFactory.Identifier("Mock")
                                                                               .AsGeneric()
                                                                               .WithTypeArgument(x.TypeName)
                                                                               .AsObjectCreationExpressionWithoutArguments())
                                                  .AsExpressionStatement(),
 
-                    CreationArgument = SyntaxFactory.IdentifierName("_" + "mock" + FirstCharToUpper(x.ArgumentName))
+                    CreationArgument = SyntaxFactory.IdentifierName("_" + "mock" + x.ArgumentName.FirstCharToUpperCase())
                                                     .MemberAccess("Object")
                                                     .AsArgument()
                 }).ToArray();
@@ -280,7 +279,7 @@ namespace MockIt
 
                 NewExpression = SyntaxHelper.VarTypeSyntax()
                                             .AsVariableDeclaration()
-                                            .WithVariable(SyntaxFactory.Identifier("mock" + FirstCharToUpper(x.ArgumentName))
+                                            .WithVariable(SyntaxFactory.Identifier("mock" + x.ArgumentName.FirstCharToUpperCase())
                                                                        .AsVariableDeclarator()
                                                                        .WithInitializer(
                                                                            SyntaxFactory.EqualsValueClause(
@@ -290,19 +289,14 @@ namespace MockIt
                                                                                             .AsObjectCreationExpressionWithoutArguments())))
                                             .AsLocalDeclarationStatement(),
 
-                CreationArgument = SyntaxFactory.IdentifierName("mock" + FirstCharToUpper(x.ArgumentName))
+                CreationArgument = SyntaxFactory.IdentifierName("mock" + x.ArgumentName.FirstCharToUpperCase())
                                                 .MemberAccess("Object")
                                                 .AsArgument()
             }).ToArray();
         }
 
-        private static string FirstCharToUpper(string input)
-        {
-            return char.ToUpper(input[0]) + input.Substring(1);
-        }
-
         public static async Task<Document> ApplyConstructorInjections(Document document,
-            SyntaxNode creation,
+            SyntaxNode objectCreationNode,
             CancellationToken cancellationToken,
             IReadOnlyCollection<ConstructorInjections> changes,
             ObjectCreationExpressionSyntax creationExpressionSyntax,
@@ -310,18 +304,15 @@ namespace MockIt
         {
             var editor = await DocumentEditor.CreateAsync(document, cancellationToken).ConfigureAwait(false);
 
-            var arguments = (from change in changes
-                             from comma in new[] { (SyntaxNodeOrToken)SyntaxFactory.Token(SyntaxKind.CommaToken) }
-                             select new { change.CreationArgument, comma })
-                .SelectMany(x => new[] { x.CreationArgument, x.comma })
-                .Take(changes.Count * 2 - 1);
+            var arguments = changes.Select(change => change.CreationArgument);
 
-            if (sutCreationContextType != SutCreationContextType.Method)
+            // Insert generated fields declarations
+            if (sutCreationContextType != SutCreationContextType.Method && objectCreationNode.Parent?.Parent != null)
             {
-                editor.InsertBefore(creation.Parent.Parent, changes.Select(x => x.NewField));
+                editor.InsertBefore(objectCreationNode.Parent.Parent, changes.Select(x => x.NewField));
             }
 
-            editor.InsertBefore(creation, changes.Select(x => x.NewExpression.WithAdditionalAnnotations(Formatter.Annotation)));
+            editor.InsertBefore(objectCreationNode, changes.Select(x => x.NewExpression.WithAdditionalAnnotations(Formatter.Annotation)));
             editor.ReplaceNode(creationExpressionSyntax.ArgumentList, arguments.AsArgumentList());
 
             return editor.GetChangedDocument();
