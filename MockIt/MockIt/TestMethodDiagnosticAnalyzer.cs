@@ -101,7 +101,10 @@ namespace MockIt
                     }
                 }
             }
-            catch { }
+            catch
+            {
+                // ignored
+            }
         }
 
         private static bool IsNotExpressionNeedsToMock(IReadOnlyCollection<string> mocksInvocations, SyntaxNode expression)

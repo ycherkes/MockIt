@@ -21,6 +21,7 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
+using MockIt.Extensions;
 using System.Collections.Immutable;
 using System.Composition;
 using System.Linq;
@@ -43,23 +44,24 @@ namespace MockIt
         {
             var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
 
+            if (root == null) return;
+
             var diagnostic = context.Diagnostics.First();
             var diagnosticSpan = diagnostic.Location.SourceSpan;
 
             var tokens = root.FindToken(diagnosticSpan.Start)
                              .Parent
-                             .AncestorsAndSelf();
+                             ?.AncestorsAndSelf();
 
-            var invocation = tokens.FirstOrDefault(x => x is ExpressionStatementSyntax || x is LocalDeclarationStatementSyntax);
+            var invocation = tokens?.FirstOrDefault(x => x is ExpressionStatementSyntax || x is LocalDeclarationStatementSyntax);
 
             if (invocation == null) return;
 
-            context.RegisterCodeFix(CodeAction.Create("Setup mocks with callbacks", c => SetupMocks(context.Document, invocation, c, true), "MockItTool-7353a10c-1be6-4916-bd45-1063dec8778a"), diagnostic);
-            context.RegisterCodeFix(CodeAction.Create("Setup mocks", c => SetupMocks(context.Document, invocation, c, false), "MockItTool-c006008d-86e4-4383-8c87-27b4b06c6196"), diagnostic);
+            context.RegisterCodeFix(CodeAction.Create("Setup mocks with callbacks", c => SetupMocks(context.Document, invocation, c, true), "MockItTool.SetupMocksWithCallbacks"), diagnostic);
+            context.RegisterCodeFix(CodeAction.Create("Setup mocks", c => SetupMocks(context.Document, invocation, c, false), "MockItTool.SetupMocks"), diagnostic);
         }
 
-        private static async Task<Document> SetupMocks(Document document, SyntaxNode invocationSyntax,
-            CancellationToken cancellationToken, bool withCallBack)
+        private static async Task<Document> SetupMocks(Document document, SyntaxNode invocationSyntax, CancellationToken cancellationToken, bool withCallBack)
         {
             var testSemanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
 

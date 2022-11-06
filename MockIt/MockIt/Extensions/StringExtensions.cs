@@ -1,4 +1,4 @@
-﻿namespace MockIt
+﻿namespace MockIt.Extensions
 {
     public static class StringExtensions
     {

@@ -2,7 +2,7 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace MockIt.Syntax
+namespace MockIt.Extensions
 {
     internal static class SyntaxNodeExtensions
     {

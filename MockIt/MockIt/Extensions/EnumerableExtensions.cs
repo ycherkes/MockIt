@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace MockIt
+namespace MockIt.Extensions
 {
     public static class EnumerableExtensions
     {

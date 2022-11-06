@@ -1,8 +1,8 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using MockIt.Extensions;
 using MockIt.Model;
-using MockIt.Syntax;
 using MockIt.ThirdParty;
 using System;
 using System.Collections.Generic;

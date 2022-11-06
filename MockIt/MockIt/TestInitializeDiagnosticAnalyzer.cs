@@ -65,7 +65,10 @@ namespace MockIt
                     semanticModel.ReportDiagnostic(Diagnostic.Create(Rule, location.location, props));
                 }
             }
-            catch { }
+            catch
+            {
+                // ignored
+            }
         }
 
         private static Location GetDiagnosticLocation(SemanticModelAnalysisContext semanticModel,

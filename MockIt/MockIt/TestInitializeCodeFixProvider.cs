@@ -62,13 +62,13 @@ namespace MockIt
             context.RegisterCodeFix(CodeAction.Create("Fill with mocks", c => FillWithMocks(context, creation, c), "MockItTool"), diagnostic);
         }
 
-        private static async Task<Document> FillWithMocks(CodeFixContext context, SyntaxNode creation,
+        private static async Task<Document> FillWithMocks(CodeFixContext context, SyntaxNode objectCreationNode,
             CancellationToken cancellationToken)
         {
             Document document = context.Document;
-            var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
 
-            var creationExpressionSyntax = creation.DescendantNodes().OfType<ObjectCreationExpressionSyntax>().FirstOrDefault();
+            var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
+            var creationExpressionSyntax = objectCreationNode.DescendantNodes().OfType<ObjectCreationExpressionSyntax>().FirstOrDefault();
 
             if (creationExpressionSyntax == null)
                 return document;
@@ -86,13 +86,16 @@ namespace MockIt
                 TypeName = x.Type.GetSimpleTypeName()
             }).ToArray();
 
-            var creationContextProperty = context.Diagnostics.FirstOrDefault()?.Properties.GetValueOrDefault("ContextType") ?? nameof(SutCreationContextType.Constructor);
+            var creationContextProperty = context.Diagnostics.FirstOrDefault()?.Properties.GetValueOrDefault("ContextType");
 
-            var creationContext = (SutCreationContextType)Enum.Parse(typeof(SutCreationContextType), creationContextProperty);
+            if (!Enum.TryParse(creationContextProperty, out SutCreationContextType creationContext))
+            {
+                creationContext = SutCreationContextType.Constructor;
+            }
 
             var changes = constructorParameters.GetConstructorInjections(creationContext);
 
-            var changedDocument = await ChangesMaker.ApplyConstructorInjections(document, creation, cancellationToken, changes, creationExpressionSyntax, creationContext).ConfigureAwait(false);
+            var changedDocument = await ChangesMaker.ApplyConstructorInjections(document, objectCreationNode, cancellationToken, changes, creationExpressionSyntax, creationContext).ConfigureAwait(false);
 
             return changedDocument;
         }
