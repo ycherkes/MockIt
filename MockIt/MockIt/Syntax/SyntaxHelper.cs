@@ -69,10 +69,6 @@ namespace MockIt.Syntax
             return Argument(owner);
         }
 
-        public static ObjectCreationExpressionSyntax AsObjectCreationExpression(this TypeSyntax typeSyntax)
-        {
-            return ObjectCreationExpression(typeSyntax);
-        }
         public static ObjectCreationExpressionSyntax AsObjectCreationExpressionWithoutArguments(this TypeSyntax typeSyntax)
         {
             return ObjectCreationExpression(typeSyntax).WithArgumentList(ArgumentList());
@@ -90,12 +86,6 @@ namespace MockIt.Syntax
         public static InvocationExpressionSyntax WithArguments(this InvocationExpressionSyntax owner, params ExpressionSyntax[] arguments)
         {
             return owner.WithArgumentList(ArgumentList(SeparatedList(arguments?.Select(Argument) ?? Array.Empty<ArgumentSyntax>())));
-        }
-
-
-        public static GenericNameSyntax WithTypeArguments(this GenericNameSyntax owner, params string[] typeArguments)
-        {
-            return owner.WithTypeArgumentList(TypeArgumentList(SeparatedList(typeArguments?.Select(GetTypeSyntax) ?? Array.Empty<TypeSyntax>())));
         }
 
         public static VariableDeclarationSyntax WithVariable(this VariableDeclarationSyntax owner, string variableName)
