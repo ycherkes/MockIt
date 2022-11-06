@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MockIt.Test.Helpers;
+using System;
 using System.Diagnostics;
 using CodeFixVerifier = MockIt.Test.Verifiers.CodeFixVerifier;
 
@@ -37,11 +38,11 @@ namespace MockIt.Test
                     private IService sut;
                     private Mock<ISubService> subServiceMock;
 
-        [TestInitialize]
+                    [TestInitialize]
                     public void Init()
                     {
-            subServiceMock = new Mock<ISubService>();
-            sut = new Service(subServiceMock.Object);
+                        subServiceMock = new Mock<ISubService>();
+                        sut = new Service(subServiceMock.Object);
                     }
             
                     [TestMethod]
@@ -83,12 +84,9 @@ namespace MockIt.Test
             var expected = new DiagnosticResult
             {
                 Id = TestMethodDiagnosticAnalyzer.DiagnosticId,
-                Message = $"Can be mocked",
+                Message = "Can be mocked",
                 Severity = DiagnosticSeverity.Warning,
-                Locations =
-                    new[] {
-                            new DiagnosticResultLocation("Test0.cs", 23, 25)
-                        }
+                Locations = new[] { new DiagnosticResultLocation("Test0.cs", 23, 25) }
             };
 
             VerifyCSharpDiagnostic(test, expected);
@@ -102,35 +100,21 @@ namespace MockIt.Test
                 [TestClass]
                 public class UnitTest2
                 {
-                    private IService _sut;
-                    private Mock<ISubService> _subServiceMock;
+                    private IService sut;
+                    private Mock<ISubService> subServiceMock;
 
                     [TestInitialize]
                     public void Init()
                     {
-                         _subServiceMock = new Mock<ISubService>();
-                         _sut = new Service(_subServiceMock.Object);
+                        subServiceMock = new Mock<ISubService>();
+                        sut = new Service(subServiceMock.Object);
                     }
             
                     [TestMethod]
                     public void TestMethod1()
                     {
-            _subServiceMock.Setup(x => x.DoSubSomething(It.IsAny<int>()))
-            .Callback<int>(doInt => { })
-            .ReturnsAsync(default(bool));
-
-            _sut.DoSomething(2);
-
-            _subServiceMock.VerifyAll();
-        }
-
-                    [TestMethod]
-                    public void TestMethod2()
-                    {
-                        var subServiceMock = new Mock<ISubService>();
-                        var sut = new Service(subServiceMock.Object);
-            subServiceMock.Setup(x => x.DoSubSomething(It.Is<int>(doInt => doInt == default)))
-            .ReturnsAsync(default(bool));
+            subServiceMock.Setup(x => x.DoSubSomething(It.IsAny<int>()))
+            .Callback<int>(doInt => { });
 
             sut.DoSomething(2);
 
@@ -144,12 +128,12 @@ namespace MockIt.Test
             
                 public interface IService
                 {
-                    bool DoSomething(int doInt);
+                    void DoSomething(int doInt);
                 }
             
                 public interface ISubService
                 {
-                    Task<bool> DoSubSomething(int doInt);
+                    void DoSubSomething(int doInt);
                 }
             
                 public class Service : IService
@@ -161,9 +145,9 @@ namespace MockIt.Test
                         _subService = subService;
                     }
             
-                    public bool DoSomething(int doInt)
+                    public void DoSomething(int doInt)
                     {
-                        return _subService.DoSubSomething(doInt);
+                        _subService.DoSubSomething(doInt);
                     }
                 }
             }";
@@ -274,7 +258,8 @@ namespace MockIt.Test
                     {
                         var subServiceMock = new Mock<ISubService>();
                         var sut = new Service(subServiceMock.Object);
-            subServiceMock.Setup(x => x.DoSubSomething(It.Is<int>(doInt => doInt == default)))
+            subServiceMock.Setup(x => x.DoSubSomething(It.IsAny<int>()))
+            .Callback<int>(doInt => { })
             .ReturnsAsync(default(bool));
 
             sut.DoSomething(2);
@@ -374,76 +359,7 @@ namespace MockIt.Test
                     }
                 }
             }";
-            var expected = new DiagnosticResult
-            {
-                Id = TestInitializeDiagnosticAnalyzer.DiagnosticId,
-                Message = "Can be mocked",
-                Severity = DiagnosticSeverity.Info,
-                Locations =
-                    new[] {
-                            new DiagnosticResultLocation("Test0.cs", 15, 25)
-                        }
-            };
-
-            VerifyCSharpDiagnostic(test, expected);
-
-            var fixtest = @"
-            using Microsoft.VisualStudio.TestTools.UnitTesting;
-            using TestMockProjectTest;
-            
-            namespace TestMockUnitTests
-            {
-                [TestClass]
-                public class UnitTest2
-                {
-                    private IService _sut;
-        private Mock<ISubService> _subServiceMock;
-
-        [TestInitialize]
-                    public void Init()
-                    {
-            _subServiceMock = new Mock<ISubService>();
-
-            _sut = new Service(_subServiceMock.Object);
-                    }
-            
-                    [TestMethod]
-                    public void TestMethod1()
-                    {
-                        _sut.DoSomething(2);
-                    }
-                }
-            }
-            
-            namespace TestMockProjectTest
-            {
-            
-                public interface IService
-                {
-                    void DoSomething(int doInt);
-                }
-            
-                public interface ISubService
-                {
-                    void DoSubSomething(int doInt);
-                }
-            
-                public class Service : IService
-                {
-                    private readonly ISubService _subService;
-            
-                    public Service(ISubService subService)
-                    {
-                        _subService = subService;
-                    }
-            
-                    public void DoSomething(int doInt)
-                    {
-                        _subService.DoSubSomething(doInt);
-                    }
-                }
-            }";
-            VerifyCSharpFix(test, fixtest);
+            VerifyCSharpDiagnostic(test, Array.Empty<DiagnosticResult>());
         }
 
         [DebuggerStepThrough]

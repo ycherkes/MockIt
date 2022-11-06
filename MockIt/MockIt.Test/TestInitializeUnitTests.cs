@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MockIt.Test.Helpers;
 using MockIt.Test.Verifiers;
+using System.Diagnostics;
 
 namespace MockIt.Test
 {
@@ -100,14 +101,13 @@ namespace MockIt.Test
                 public class UnitTest2
                 {
                     private IService _sut;
-        private Mock<ISubService> _subServiceMock;
+        private Mock<ISubService> _mockSubService;
 
         [TestInitialize]
                     public void Init()
                     {
-            _subServiceMock = new Mock<ISubService>();
-
-            _sut = new Service(_subServiceMock.Object);
+            _mockSubService = new Mock<ISubService>();
+            _sut = new Service(_mockSubService.Object);
                     }
             
                     [TestMethod]
@@ -241,19 +241,20 @@ namespace MockIt.Test
                 public class UnitTest2
                 {
                     private IService _sut;
-        private Mock<ISubService> _subServiceMock;
+        private Mock<ISubService> _mockSubService;
 
         [TestInitialize]
-                    public void Init()
+                    public void TestInitialize()
                     {
-            _subServiceMock = new Mock<ISubService>();
-
-            _sut = new Service(_subServiceMock.Object);
+            _mockSubService = new Mock<ISubService>();
+            _sut = new Service(_mockSubService.Object);
                     }
-            
+
                     [TestMethod]
                     public void TestMethod1()
                     {
+            var mockSubService = new Mock<ISubService>();
+            var sut = new Service(mockSubService.Object);
                         _sut.DoSomething(2);
                     }
                 }
@@ -370,14 +371,13 @@ namespace MockIt.Test
                 public class UnitTest2
                 {
                     private IService sut;
-        private Mock<ISubService<string>> subServiceMock;
+        private Mock<ISubService<string>> _mockSubService;
 
         [TestInitialize]
                     public void Init()
                     {
-            subServiceMock = new Mock<ISubService<string>>();
-
-            sut = new Service(subServiceMock.Object);
+            _mockSubService = new Mock<ISubService<string>>();
+            sut = new Service(_mockSubService.Object);
                     }
             
                     [TestMethod]
@@ -543,11 +543,13 @@ namespace MockIt.Test
             VerifyCSharpFix(test, fixtest);
         }
 
+        [DebuggerStepThrough]
         protected override CodeFixProvider GetCSharpCodeFixProvider()
         {
             return new TestInitializeCodeFixProvider();
         }
 
+        [DebuggerStepThrough]
         protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
         {
             return new TestInitializeDiagnosticAnalyzer();

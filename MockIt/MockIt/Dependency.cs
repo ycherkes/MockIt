@@ -28,7 +28,7 @@ namespace MockIt
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
+            if (obj.GetType() != GetType()) return false;
             return Equals((Dependency)obj);
         }
 
@@ -36,7 +36,7 @@ namespace MockIt
         {
             unchecked
             {
-                var hashCode = (FieldOrLocalVariable != null ? FieldOrLocalVariable.GetHashCode() : 0);
+                var hashCode = FieldOrLocalVariable != null ? FieldOrLocalVariable.GetHashCode() : 0;
                 hashCode = (hashCode * 397) ^ IsInjectedFromConstructor.GetHashCode();
                 hashCode = (hashCode * 397) ^ (SetupExpression != null ? SetupExpression.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (SetupIdentifierNode != null ? SetupIdentifierNode.GetHashCode() : 0);
