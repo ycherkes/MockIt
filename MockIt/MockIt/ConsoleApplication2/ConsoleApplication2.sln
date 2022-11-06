@@ -5,9 +5,14 @@ VisualStudioVersion = 17.3.32922.545
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTestProject1", "UnitTestProject1\UnitTestProject1.csproj", "{B7C1350C-3CDD-4F31-8A08-7092832CFF76}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DemoClassLibrary", "DemoClassLibrary\DemoClassLibrary.csproj", "{BABE031B-ECE9-480B-BBE2-628C723692A2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DemoClassLibrary", "DemoClassLibrary\DemoClassLibrary.csproj", "{BABE031B-ECE9-480B-BBE2-628C723692A2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestProject", "TestProject\TestProject.csproj", "{0575D313-6D5A-4836-8785-B7CAD91039C7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestProject", "TestProject\TestProject.csproj", "{0575D313-6D5A-4836-8785-B7CAD91039C7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{95D35051-4686-472D-898B-4E87BB0E4279}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
