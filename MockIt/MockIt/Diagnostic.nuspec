@@ -2,14 +2,14 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
   <metadata>
     <id>MockIt</id>
-    <version>1.0.0.25</version>
+    <version>0.0.0.1</version>
     <title>MockIt</title>
     <authors>Yevhen Cherkes</authors>
     <owners>Yevhen Cherkes</owners>
     <licenseUrl>http://www.apache.org/licenses/LICENSE-2.0</licenseUrl>
     <projectUrl>https://github.com/ycherkes/MockIt</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>A Visual Studio 2015 extension to automate mocks creating and configuring.
+    <description>A Diagnostic Analyzer and CodeFix Provider to automate mocks creating and configuring.
     Also available via Visual Studio gallery https://visualstudiogallery.msdn.microsoft.com/713cf20e-e553-4bc9-ac02-477c750fad61 .
     Don't forget to reload Visual Studio instance after the plugin installation.
     </description>
