@@ -241,7 +241,8 @@ namespace MockIt
                                                                         .WithAdditionalAnnotations(Formatter.Annotation)));
         }
 
-        public static ConstructorInjections[] GetConstructorInjections(this IEnumerable<ConstructorParameters> constructorParameters, SutCreationContextType creationContext)
+        public static ConstructorInjections[] GetConstructorInjections(this IEnumerable<ConstructorParameters> constructorParameters,
+            SutCreationContextType creationContext, NameGenerator nameGenerator)
         {
             if (creationContext != SutCreationContextType.Method)
             {
@@ -252,35 +253,43 @@ namespace MockIt
                     modifiers = modifiers.Add(SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword));
                 }
 
-                return constructorParameters.Select(x => new ConstructorInjections
+                return constructorParameters.Select(x => new
+                {
+                    FieldName = nameGenerator.GetFieldName(x.ArgumentName),
+                    x.TypeName
+                }).Select(x => new ConstructorInjections
                 {
                     NewField = SyntaxFactory.Identifier("Mock")
                                             .AsGeneric()
                                             .WithTypeArgument(x.TypeName)
                                             .AsVariableDeclaration()
-                                            .WithVariable("_" + "mock" + x.ArgumentName.FirstCharToUpperCase())
+                                            .WithVariable(x.FieldName)
                                             .AsFieldDeclaration()
                                             .WithModifiers(modifiers),
 
-                    NewExpression = SyntaxFactory.IdentifierName("_" + "mock" + x.ArgumentName.FirstCharToUpperCase())
+                    NewExpression = SyntaxFactory.IdentifierName(x.FieldName)
                                                  .SimpleAssignTo(SyntaxFactory.Identifier("Mock")
                                                                               .AsGeneric()
                                                                               .WithTypeArgument(x.TypeName)
                                                                               .AsObjectCreationExpressionWithoutArguments())
                                                  .AsExpressionStatement(),
 
-                    CreationArgument = SyntaxFactory.IdentifierName("_" + "mock" + x.ArgumentName.FirstCharToUpperCase())
+                    CreationArgument = SyntaxFactory.IdentifierName(x.FieldName)
                                                     .MemberAccess("Object")
                                                     .AsArgument()
                 }).ToArray();
             }
 
-            return constructorParameters.Select(x => new ConstructorInjections
+            return constructorParameters.Select(x => new
+            {
+                VariableName = nameGenerator.GetVariableName(x.ArgumentName),
+                x.TypeName
+            }).Select(x => new ConstructorInjections
             {
 
                 NewExpression = SyntaxHelper.VarTypeSyntax()
                                             .AsVariableDeclaration()
-                                            .WithVariable(SyntaxFactory.Identifier("mock" + x.ArgumentName.FirstCharToUpperCase())
+                                            .WithVariable(SyntaxFactory.Identifier(x.VariableName)
                                                                        .AsVariableDeclarator()
                                                                        .WithInitializer(
                                                                            SyntaxFactory.EqualsValueClause(
@@ -290,7 +299,7 @@ namespace MockIt
                                                                                             .AsObjectCreationExpressionWithoutArguments())))
                                             .AsLocalDeclarationStatement(),
 
-                CreationArgument = SyntaxFactory.IdentifierName("mock" + x.ArgumentName.FirstCharToUpperCase())
+                CreationArgument = SyntaxFactory.IdentifierName(x.VariableName)
                                                 .MemberAccess("Object")
                                                 .AsArgument()
             }).ToArray();

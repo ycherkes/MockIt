@@ -49,20 +49,36 @@ namespace MockIt
             context.RegisterSemanticModelAction(AnalyzeSemantic);
         }
 
-        private static void AnalyzeSemantic(SemanticModelAnalysisContext semanticModel)
+        private static void AnalyzeSemantic(SemanticModelAnalysisContext semanticModelContext)
         {
             try
             {
-                var sutContext = TestSemanticHelper.GetSutCreationContextContainer(semanticModel.SemanticModel);
+                var config = semanticModelContext.Options.AnalyzerConfigOptionsProvider.GetOptions(semanticModelContext.SemanticModel.SyntaxTree);
+                if (!config.TryGetValue("dotnet_diagnostic.MockItInitializer.mock_variable_name_template", out var mockVariableNameTemplate))
+                {
+                    mockVariableNameTemplate = "mock{0}";
+                }
+                if (!config.TryGetValue("dotnet_diagnostic.MockItInitializer.mock_field_name_template", out var mockFieldNameTemplate))
+                {
+                    mockFieldNameTemplate = "_mock{0}";
+                }
+
+                var props = new (string key, string value)[]
+                {
+                    ("VariableNameTemplate", mockVariableNameTemplate ),
+                    ("FieldNameTemplate", mockFieldNameTemplate )
+                }.ToImmutableDictionary(x => x.key, x => x.value);
+
+                var sutContext = TestSemanticHelper.GetSutCreationContextContainer(semanticModelContext.SemanticModel);
 
                 var locations = sutContext.Contexts
-                                          .Select(x => new { location = GetDiagnosticLocation(semanticModel, x), x.ContextType })
+                                          .Select(x => new { location = GetDiagnosticLocation(semanticModelContext, x), x.ContextType })
                                           .Where(x => x.location != null);
+
 
                 foreach (var location in locations)
                 {
-                    var props = ImmutableDictionary<string, string>.Empty.Add("ContextType", location.ContextType.ToString());
-                    semanticModel.ReportDiagnostic(Diagnostic.Create(Rule, location.location, props));
+                    semanticModelContext.ReportDiagnostic(Diagnostic.Create(Rule, location.location, props.Add("ContextType", location.ContextType.ToString())));
                 }
             }
             catch

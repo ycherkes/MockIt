@@ -93,7 +93,11 @@ namespace MockIt
                 creationContext = SutCreationContextType.Constructor;
             }
 
-            var changes = constructorParameters.GetConstructorInjections(creationContext);
+            string variableNameTemplate = context.Diagnostics.FirstOrDefault()?.Properties.GetValueOrDefault("VariableNameTemplate") ?? "mock{0}";
+            string fieldNameTemplate = context.Diagnostics.FirstOrDefault()?.Properties.GetValueOrDefault("FieldNameTemplate") ?? "_mock{0}";
+            var nameGenerator = new NameGenerator(variableNameTemplate, fieldNameTemplate);
+
+            var changes = constructorParameters.GetConstructorInjections(creationContext, nameGenerator);
 
             var changedDocument = await ChangesMaker.ApplyConstructorInjections(document, objectCreationNode, cancellationToken, changes, creationExpressionSyntax, creationContext).ConfigureAwait(false);
 
