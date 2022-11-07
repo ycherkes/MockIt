@@ -48,7 +48,6 @@ namespace MockIt
             return string.Format(_variableNameTemplate, adaptedVariableName);
         }
 
-
         public string GetFieldName(string injectedFieldName)
         {
             var adaptedFieldName = _fieldNameAdapter(injectedFieldName);
