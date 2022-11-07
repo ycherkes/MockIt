@@ -1,6 +1,5 @@
 ﻿using DemoClassLibrary;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 using System.Collections.Generic;
 
 namespace UnitTestProject1

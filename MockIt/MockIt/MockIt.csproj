@@ -9,10 +9,10 @@
   <PropertyGroup>
     <PackageId>MockIt</PackageId>
     <PackageVersion>2.0.0.0</PackageVersion>
-    <Authors>DELL</Authors>
-    <PackageLicenseUrl>http://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
+    <Authors>Yevhen Cherkes</Authors>
+	<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>http://www.apache.org/licenses/LICENSE-2.0</PackageProjectUrl>
-   <RepositoryUrl>https://github.com/ycherkes/MockIt</RepositoryUrl>
+    <RepositoryUrl>https://github.com/ycherkes/MockIt</RepositoryUrl>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Description>
       A Diagnostic Analyzer and CodeFix Provider to automate mocks creating and configuring.
@@ -28,13 +28,9 @@
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_AddAnalyzersToOutput</TargetsForTfmSpecificContentInPackage>
 
     <Title>MockIt</Title>
-
-    <PackageIcon>CombatMosquito.png</PackageIcon>
-
-    <AssemblyVersion>2.0.0.0</AssemblyVersion>
-
-    <FileVersion>2.0.0.0</FileVersion>
-
+	<PackageIcon>CombatMosquito.png</PackageIcon>
+	<AssemblyVersion>2.0.0.0</AssemblyVersion>
+	<FileVersion>2.0.0.0</FileVersion>
     <RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
   </PropertyGroup>
   <ItemGroup>
