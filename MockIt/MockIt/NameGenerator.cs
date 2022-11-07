@@ -25,28 +25,44 @@ namespace MockIt
     {
         private readonly string _variableNameTemplate;
         private readonly string _fieldNameTemplate;
-        private readonly bool _uppercaseVariableSuffix;
-        private readonly bool _uppercaseFieldSuffix;
+        private readonly Func<string, string> _variableNameAdapter;
+        private readonly Func<string, string> _fieldNameAdapter;
 
         public NameGenerator(string variableNameTemplate, string fieldNameTemplate)
         {
             _variableNameTemplate = variableNameTemplate ?? throw new ArgumentNullException(nameof(variableNameTemplate));
             _fieldNameTemplate = fieldNameTemplate ?? throw new ArgumentNullException(nameof(fieldNameTemplate));
 
-            _uppercaseVariableSuffix = !_variableNameTemplate.StartsWith("{0}");
-            _uppercaseFieldSuffix = !fieldNameTemplate.StartsWith("{0}") && !fieldNameTemplate.StartsWith("_{0}");
+            _variableNameAdapter = _variableNameTemplate.StartsWith("{0}")
+                ? (Func<string, string>)ToCamelCase
+                : ToPascalCase;
+
+            _fieldNameAdapter = fieldNameTemplate.StartsWith("{0}") || fieldNameTemplate.StartsWith("_{0}")
+                ? (Func<string, string>)ToCamelCase
+                : ToPascalCase;
         }
 
         public string GetVariableName(string injectedVariableName)
         {
-            var preparedVariableName = _uppercaseVariableSuffix ? injectedVariableName.FirstCharToUpperCase() : injectedVariableName;
-            return string.Format(_variableNameTemplate, preparedVariableName);
+            var adaptedVariableName = _variableNameAdapter(injectedVariableName);
+            return string.Format(_variableNameTemplate, adaptedVariableName);
         }
+
 
         public string GetFieldName(string injectedFieldName)
         {
-            var preparedFieldName = _uppercaseFieldSuffix ? injectedFieldName.FirstCharToUpperCase() : injectedFieldName;
-            return string.Format(_fieldNameTemplate, preparedFieldName);
+            var adaptedFieldName = _fieldNameAdapter(injectedFieldName);
+            return string.Format(_fieldNameTemplate, adaptedFieldName);
+        }
+
+        private static string ToPascalCase(string name)
+        {
+            return name.FirstCharToUpperCase();
+        }
+
+        private static string ToCamelCase(string name)
+        {
+            return name.FirstCharToLowerCase();
         }
     }
 }

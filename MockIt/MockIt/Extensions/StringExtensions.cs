@@ -6,5 +6,10 @@
         {
             return char.ToUpper(input[0]) + input.Substring(1);
         }
+
+        public static string FirstCharToLowerCase(this string input)
+        {
+            return char.ToLower(input[0]) + input.Substring(1);
+        }
     }
 }
