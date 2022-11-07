@@ -123,7 +123,7 @@ namespace MockIt.Syntax
         }
         public static ExpressionSyntax WithCarriageReturnTrailingTrivia(this ExpressionSyntax expression)
         {
-            return expression.WithTrailingTrivia(TriviaList(CarriageReturnLineFeed));
+            return expression.WithTrailingTrivia(TriviaList(CarriageReturnLineFeed, Tab));
         }
 
         public static TypeSyntax GetTypeSyntax(string typeIdentifier)

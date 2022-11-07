@@ -21,7 +21,9 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Editing;
 using MockIt.Model;
+using MockIt.Syntax;
 using System;
 using System.Collections.Immutable;
 using System.Composition;
@@ -75,7 +77,7 @@ namespace MockIt
 
             var symbolInfo = semanticModel.GetSymbolInfo(creationExpressionSyntax);
 
-            var invokedSymbol = symbolInfo.CandidateSymbols.OfType<IMethodSymbol>().FirstOrDefault(/*&& ((IMethodSymbol)x).Parameters.All(y => y.Type.IsAbstract)*/);
+            var invokedSymbol = symbolInfo.CandidateSymbols.OfType<IMethodSymbol>().FirstOrDefault();
 
             if ((invokedSymbol?.Parameters.Length ?? 0) == 0)
                 return document;
@@ -97,11 +99,13 @@ namespace MockIt
             string fieldNameTemplate = context.Diagnostics.FirstOrDefault()?.Properties.GetValueOrDefault("FieldNameTemplate") ?? "_mock{0}";
             var nameGenerator = new NameGenerator(variableNameTemplate, fieldNameTemplate);
 
-            var changes = constructorParameters.GetConstructorInjections(creationContext, nameGenerator);
+            var constructorInjections = MockSyntaxGenerator.GetConstructorInjections(constructorParameters, creationContext, nameGenerator);
 
-            var changedDocument = await ChangesMaker.ApplyConstructorInjections(document, objectCreationNode, cancellationToken, changes, creationExpressionSyntax, creationContext).ConfigureAwait(false);
+            var editor = await DocumentEditor.CreateAsync(document, cancellationToken).ConfigureAwait(false);
 
-            return changedDocument;
+            editor.ApplyConstructorInjections(objectCreationNode, constructorInjections, creationExpressionSyntax, creationContext);
+
+            return editor.GetChangedDocument();
         }
     }
 }

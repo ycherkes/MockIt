@@ -93,7 +93,7 @@ namespace MockIt
 
             var editor = await DocumentEditor.CreateAsync(document, cancellationToken).ConfigureAwait(false);
 
-            ChangesMaker.ApplyMethodCodeFixChanges(invocationSyntax, editor, invokedMethodsOfMocksDistinct, withCallBack);
+            invocationSyntax.ApplyMethodCodeFixChanges(editor, invokedMethodsOfMocksDistinct, withCallBack);
 
             return editor.GetChangedDocument();
         }

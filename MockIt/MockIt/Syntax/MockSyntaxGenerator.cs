@@ -1,23 +1,18 @@
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Editing;
-using Microsoft.CodeAnalysis.Formatting;
 using MockIt.Extensions;
 using MockIt.Model;
-using MockIt.Syntax;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace MockIt
+namespace MockIt.Syntax
 {
-    public static class ChangesMaker
+    public static class MockSyntaxGenerator
     {
-        private static IEnumerable<ExpressionStatementSyntax> GetVerifiers(IEnumerable<FieldOrLocalVariables> invokedMethodsOfMocks)
+        public static IEnumerable<ExpressionStatementSyntax> GetVerifiers(IEnumerable<FieldOrLocalVariables> invokedMethodsOfMocks)
         {
             var verifiers = invokedMethodsOfMocks.SelectMany(x => x.FieldOrLocalVariablesToSetup.SelectMany(y => y.FieldOrLocalVariableName))
                                                  .Distinct()
@@ -27,7 +22,7 @@ namespace MockIt
             return verifiers;
         }
 
-        private static ExpressionStatementSyntax[] GetSetups(IEnumerable<FieldOrLocalVariables> invokedMethodsOfMocks, bool withCallBack)
+        public static ExpressionStatementSyntax[] GetSetups(IEnumerable<FieldOrLocalVariables> invokedMethodsOfMocks, bool withCallBack)
         {
             var setups = invokedMethodsOfMocks.SelectMany(x => x.FieldOrLocalVariablesToSetup
                                               .SelectMany(y => y.FieldOrLocalVariableName.Select(f => GetSetups(f, x, y, withCallBack))))
@@ -176,7 +171,7 @@ namespace MockIt
             var getExpression = SyntaxFactory.IdentifierName(identifier)
                                              .Invoke("SetupGet")
                                              .WithArgument(setupLambda)
-                                             .WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed))
+                                             .WithCarriageReturnTrailingTrivia()
                                              .Invoke("Returns")
                                              .WithArgument(defaultType);
 
@@ -227,21 +222,7 @@ namespace MockIt
                     : typeSymbol;
         }
 
-        public static void ApplyMethodCodeFixChanges(SyntaxNode invocationSyntax,
-            SyntaxEditor editor,
-            IReadOnlyCollection<FieldOrLocalVariables> invokedMethodsOfMocks, bool withCallBack)
-        {
-            var setups = GetSetups(invokedMethodsOfMocks, withCallBack);
-            var verifiers = GetVerifiers(invokedMethodsOfMocks);
-
-            editor.InsertBefore(invocationSyntax, setups.Select(x => x.WithTrailingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed, SyntaxFactory.CarriageReturnLineFeed))
-                                                                      .WithAdditionalAnnotations(Formatter.Annotation)));
-
-            editor.InsertAfter(invocationSyntax, verifiers.Select(x => x.WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed))
-                                                                        .WithAdditionalAnnotations(Formatter.Annotation)));
-        }
-
-        public static ConstructorInjections[] GetConstructorInjections(this IEnumerable<ConstructorParameters> constructorParameters,
+        public static ConstructorInjections[] GetConstructorInjections(IEnumerable<ConstructorParameters> constructorParameters,
             SutCreationContextType creationContext, NameGenerator nameGenerator)
         {
             if (creationContext != SutCreationContextType.Method)
@@ -303,29 +284,6 @@ namespace MockIt
                                                 .MemberAccess("Object")
                                                 .AsArgument()
             }).ToArray();
-        }
-
-        public static async Task<Document> ApplyConstructorInjections(Document document,
-            SyntaxNode objectCreationNode,
-            CancellationToken cancellationToken,
-            IReadOnlyCollection<ConstructorInjections> changes,
-            ObjectCreationExpressionSyntax creationExpressionSyntax,
-            SutCreationContextType sutCreationContextType)
-        {
-            var editor = await DocumentEditor.CreateAsync(document, cancellationToken).ConfigureAwait(false);
-
-            var arguments = changes.Select(change => change.CreationArgument);
-
-            // Insert generated fields declarations
-            if (sutCreationContextType != SutCreationContextType.Method && objectCreationNode.Parent?.Parent != null)
-            {
-                editor.InsertBefore(objectCreationNode.Parent.Parent, changes.Select(x => x.NewField));
-            }
-
-            editor.InsertBefore(objectCreationNode, changes.Select(x => x.NewExpression.WithAdditionalAnnotations(Formatter.Annotation)));
-            editor.ReplaceNode(creationExpressionSyntax.ArgumentList, arguments.AsArgumentList());
-
-            return editor.GetChangedDocument();
         }
     }
 }

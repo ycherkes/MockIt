@@ -8,7 +8,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <PackageId>MockIt</PackageId>
-    <PackageVersion>0.0.0.1</PackageVersion>
+    <PackageVersion>2.0.0.0</PackageVersion>
     <Authors>DELL</Authors>
     <PackageLicenseUrl>http://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
     <PackageProjectUrl>http://www.apache.org/licenses/LICENSE-2.0</PackageProjectUrl>
@@ -31,9 +31,9 @@
 
     <PackageIcon>CombatMosquito.png</PackageIcon>
 
-    <AssemblyVersion>0.0.0.1</AssemblyVersion>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
 
-    <FileVersion>0.0.0.1</FileVersion>
+    <FileVersion>2.0.0.0</FileVersion>
 
     <RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
   </PropertyGroup>
@@ -41,9 +41,6 @@
     <Compile Remove="ConsoleApplication2\**" />
     <EmbeddedResource Remove="ConsoleApplication2\**" />
     <None Remove="ConsoleApplication2\**" />
-  </ItemGroup>  
-  <ItemGroup>
-    <Folder Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.0" />

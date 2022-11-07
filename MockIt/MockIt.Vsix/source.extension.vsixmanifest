@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="MockIt.7c6e744f-43c1-4023-b132-f71d99c75e9e" Version="0.0.0.1" Language="en-US" Publisher="Yevhen Cherkes"/>
+        <Identity Id="MockIt.7c6e744f-43c1-4023-b132-f71d99c75e9e" Version="2.0.0.0" Language="en-US" Publisher="Yevhen Cherkes"/>
         <DisplayName>MockIt</DisplayName>
         <Description xml:space="preserve">MockIt is a Visual Studio extension that provides a Diagnostic Analyzer and Code Fix Provider for generating mocks for the Moq framework.</Description>
         <Icon>CombatMosquito.png</Icon>
@@ -12,7 +12,7 @@
         <InstallationTarget Version="[17.0,18.0)" Id="Microsoft.VisualStudio.Community">
             <ProductArchitecture>amd64</ProductArchitecture>
         </InstallationTarget>
-        <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[14.0,17.0)">
+        <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[16.0,17.0)">
             <ProductArchitecture>x86</ProductArchitecture>
         </InstallationTarget>
     </Installation>
@@ -24,7 +24,7 @@
         <Asset Type="Microsoft.VisualStudio.Analyzer" d:Source="Project" d:ProjectName="MockIt" Path="|MockIt|" />
     </Assets>
     <Prerequisites>
-        <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[15.0,18.0)" DisplayName="Visual Studio core editor" />
-        <Prerequisite Id="Microsoft.VisualStudio.Component.Roslyn.LanguageServices" Version="[15.0,18.0)" DisplayName="Roslyn Language Services" />
+        <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[16.0,18.0)" DisplayName="Visual Studio core editor" />
+        <Prerequisite Id="Microsoft.VisualStudio.Component.Roslyn.LanguageServices" Version="[16.0,18.0)" DisplayName="Roslyn Language Services" />
     </Prerequisites>
 </PackageManifest>
