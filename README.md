@@ -2,11 +2,12 @@
 
 <img src="https://yevhencherkes.gallerycdn.vsassets.io/extensions/yevhencherkes/mockit/2.0.0.0/1667833072887/Microsoft.VisualStudio.Services.Icons.Default" width="100" height="100" />
 
+# MockIt
+
 [![marketplace](https://img.shields.io/visual-studio-marketplace/v/YevhenCherkes.MockIt.svg?label=Marketplace&style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=YevhenCherkes.MockIt)
 [![downloads](https://img.shields.io/visual-studio-marketplace/d/YevhenCherkes.MockIt?label=Downloads&style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=YevhenCherkes.MockIt)
 [![License: Apache 2.0](https://img.shields.io/github/license/ycherkes/MockIt?style=for-the-badge)](https://github.com/ycherkes/MockIt/blob/master/LICENSE.txt)
 
-# MockIt
 A Visual Studio extension that provides a Diagnostic Analyzer and CodeFix Provider to automate mocks creating and configuring.
 
 It helps you to automate mocks creating in your unit tests.
