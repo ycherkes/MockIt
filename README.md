@@ -10,11 +10,9 @@
 
 A Visual Studio extension that provides a Diagnostic Analyzer and CodeFix Provider to automate mocks creating and configuring.
 
-It helps you to automate mocks creating in your unit tests.
-
 How to use it:
 
-In the **TestInitialize** (**SetUp** for NUnit) marked method create the instance of your **Service Under the Test** (SUT).
+In the **Constructor** or **TestInitialize** (**SetUp** for NUnit) marked method create the instance of your **Service Under the Test** (SUT).
 
 After that you can see code analysis error and the next suggestions (lightbulbs):
  - to create a constructor without parameters
