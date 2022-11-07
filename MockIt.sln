@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26228.9
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32922.545
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MockIt", "MockIt\MockIt\MockIt.csproj", "{0E4327D0-8008-4BC3-8442-A163F29DA800}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MockIt", "MockIt\MockIt\MockIt.csproj", "{0E4327D0-8008-4BC3-8442-A163F29DA800}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MockIt.Test", "MockIt\MockIt.Test\MockIt.Test.csproj", "{CF796779-AEAD-44D3-9A5F-5D994D9CB0C9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MockIt.Test", "MockIt\MockIt.Test\MockIt.Test.csproj", "{CF796779-AEAD-44D3-9A5F-5D994D9CB0C9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MockIt.Vsix", "MockIt\MockIt.Vsix\MockIt.Vsix.csproj", "{50AF86A8-D2D3-4AEB-8B57-1B4270CE19BE}"
 EndProject
@@ -30,5 +30,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CAC55294-636D-4358-A318-E076B1F14FC7}
 	EndGlobalSection
 EndGlobal

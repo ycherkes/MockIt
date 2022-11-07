@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace MockIt.ThirdParty
 {
-    public class TreeNode<T> : IEnumerable<TreeNode<T>>
+    public class TreeNode<T> : IEnumerable<TreeNode<T>> where T : IEquatable<T>
     {
         public T Data { get; set; }
         public TreeNode<T> Parent { get; set; }
@@ -51,7 +51,7 @@ namespace MockIt.ThirdParty
 
 
         #region searching
-        
+
         private ICollection<TreeNode<T>> ElementsIndex { get; }
 
         private void RegisterChildForSearch(TreeNode<T> node)

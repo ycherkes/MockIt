@@ -16,13 +16,15 @@
 // The latest version of this file can be found at https://github.com/ycherkes/MockIt
 #endregion
 
+
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Diagnostics;
+using System.Threading.Tasks;
 
 namespace MockIt
 {
@@ -30,73 +32,89 @@ namespace MockIt
     public class TestMethodDiagnosticAnalyzer : DiagnosticAnalyzer
     {
         public const string DiagnosticId = "MockItMethod";
-        internal const string Category = "Usage";
+        private const string Category = "Usage";
 
-        internal static readonly LocalizableString Title = new LocalizableResourceString(nameof(Resources.AnalyzerTitle), Resources.ResourceManager, typeof (Resources));
+        private static readonly LocalizableString Title = new LocalizableResourceString(nameof(Resources.AnalyzerTitle), Resources.ResourceManager, typeof(Resources));
 
-        internal static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(Resources.AnalyzerMessageFormat), Resources.ResourceManager, typeof (Resources));
+        private static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(Resources.AnalyzerMessageFormat), Resources.ResourceManager, typeof(Resources));
 
-        internal static readonly LocalizableString Description = new LocalizableResourceString(nameof(Resources.AnalyzerDescription), Resources.ResourceManager, typeof (Resources));
+        private static readonly LocalizableString Description = new LocalizableResourceString(nameof(Resources.AnalyzerDescription), Resources.ResourceManager, typeof(Resources));
 
-        internal static DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description);
+        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description);
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
         public override void Initialize(AnalysisContext context)
         {
+            context.EnableConcurrentExecution();
+            context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.Analyze | GeneratedCodeAnalysisFlags.ReportDiagnostics);
             context.RegisterSemanticModelAction(AnalyzeSemantic);
         }
 
-        private static void AnalyzeSemantic(SemanticModelAnalysisContext semanticContext)
+        private static async void AnalyzeSemantic(SemanticModelAnalysisContext semanticContext)
         {
-            var testSemanticModel = semanticContext.SemanticModel;
-
-            var methodDecls = TestSemanticHelper.GetTestMethods(testSemanticModel);
-            var methods = TestSemanticHelper.GetMethodsToConfigureMocks(methodDecls);
-            var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(methodDecls, methods);
-
-            var memberAccessExpressions = methods.Concat(properties)
-                                                 .ToArray();
-
-            if (!memberAccessExpressions.Any())
-                return;
-
-            var testInitMethodDecl = TestSemanticHelper.GetTestInitializeMethod(testSemanticModel);
-
-            if(testInitMethodDecl == null)
-                return;
-
-            var declaredFields = testInitMethodDecl.Parent.ChildNodes().OfType<FieldDeclarationSyntax>().ToArray();
-
-            var suts = testInitMethodDecl.GetSuts(testSemanticModel, declaredFields);
-            var sutIdentifiers = suts.Select(x => x.Identifier.Identifier.Text).ToArray();
-
-            memberAccessExpressions = memberAccessExpressions.Where(x => x.DescendantNodesAndSelf()
-                                                                          .Any(y => sutIdentifiers.Contains((y as IdentifierNameSyntax)?.Identifier.Text)))
-                                                             .ToArray();
-
-            var mockableExpressions = memberAccessExpressions.Where(expressionSyntax => !IsNotExpressionNeedsToMock(MocksAnalyzingEngine.GetInvokedMethodsOfMock(expressionSyntax, testSemanticModel, suts)
-                                                                                                                                 .SelectMany(x => x.FieldsToSetup
-                                                                                                                                                   .SelectMany(y => y.Field))
-                                                                                                                                 .Distinct()
-                                                                                                                                 .ToArray(),
-                                                                                                                    expressionSyntax))
-                                                               .ToArray();
-
-            foreach (var mockableExpression in mockableExpressions)
+            try
             {
-                semanticContext.ReportDiagnostic(Diagnostic.Create(Rule, mockableExpression.Parent.GetLocation()));
+                var testSemanticModel = semanticContext.SemanticModel;
+
+                var methodDeclarations = TestSemanticHelper.GetMethods(testSemanticModel).ToArray();
+                var methods = TestSemanticHelper.GetMethodsToConfigureMocks(methodDeclarations);
+                var properties = TestSemanticHelper.GetPropertiesToConfigureMocks(methodDeclarations, methods);
+
+                var memberAccessExpressions = methods.Concat(properties)
+                                                     .ToArray();
+
+                if (!memberAccessExpressions.Any())
+                    return;
+
+                var sutCreationContexts = TestSemanticHelper.GetSutCreationContextContainer(testSemanticModel);
+
+                if (sutCreationContexts.Fields.Length == 0 && sutCreationContexts.Contexts.All(x => x.DeclaredVariables.Length == 0)) return;
+
+                var suts = sutCreationContexts.Contexts.SelectMany(c => c.GetSuts(testSemanticModel, sutCreationContexts.Fields)).ToArray();
+
+                var sutIdentifiers = suts.Select(x => x.Identifier?.Text).ToArray();
+
+                memberAccessExpressions = memberAccessExpressions.Where(x => x.DescendantNodesAndSelf()
+                                                                              .Any(y => sutIdentifiers.Contains((y as IdentifierNameSyntax)?.Identifier.Text)))
+                                                                 .ToArray();
+
+                var express = memberAccessExpressions.Select(async expressionSyntax => new
+                {
+                    Syntax = expressionSyntax,
+                    ToBeMocked = !IsNotExpressionNeedsToMock((await MocksAnalyzingEngine.GetInvokedMethodsOfMock(expressionSyntax, testSemanticModel, suts))
+                                                                                        .SelectMany(x => x.FieldOrLocalVariablesToSetup
+                                                                                                          .SelectMany(y => y.FieldOrLocalVariableName))
+                                                                                        .Distinct()
+                                                                                        .ToArray(),
+                                                             expressionSyntax)
+                });
+
+                var mockableExpressions = (await Task.WhenAll(express)).Where(x => x.ToBeMocked).Select(x => x.Syntax);
+
+                foreach (var mockableExpression in mockableExpressions)
+                {
+                    var location = mockableExpression.Parent?.GetLocation();
+                    if (location != null)
+                    {
+                        semanticContext.ReportDiagnostic(Diagnostic.Create(Rule, location));
+                    }
+                }
+            }
+            catch
+            {
+                // ignored
             }
         }
 
-        private static bool IsNotExpressionNeedsToMock(IReadOnlyCollection<string> mocksInvokations, SyntaxNode expression)
+        private static bool IsNotExpressionNeedsToMock(IReadOnlyCollection<string> mocksInvocations, SyntaxNode expression)
         {
-            return mocksInvokations.Count == 0
-                    || expression.Parents(n => n is BlockSyntax)
+            return mocksInvocations.Count == 0
+                    || expression.FirstAncestorOrSelf<SyntaxNode>(n => n is MethodDeclarationSyntax || n is ConstructorDeclarationSyntax)
                                   ?.DescendantNodes()
                                   .OfType<InvocationExpressionSyntax>()
                                   .Select(x => x.ToString())
-                                  .Any(x => mocksInvokations.Any(e => Regex.IsMatch(x, e + @"\s*\.Setup"))) == true;
+                                  .Any(x => mocksInvocations.Any(e => Regex.IsMatch(x, e + @"\s*\.Setup"))) == true;
         }
     }
 }

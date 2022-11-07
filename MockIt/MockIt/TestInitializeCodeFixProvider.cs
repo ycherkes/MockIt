@@ -16,16 +16,20 @@
 // The latest version of this file can be found at https://github.com/ycherkes/MockIt
 #endregion
 
-using System.Collections.Immutable;
-using System.Composition;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Editing;
+using MockIt.Model;
+using MockIt.Syntax;
+using System;
+using System.Collections.Immutable;
+using System.Composition;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace MockIt
 {
@@ -43,46 +47,65 @@ namespace MockIt
         {
             var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
 
+            if (root == null)
+                return;
+
             var diagnostic = context.Diagnostics.First();
             var diagnosticSpan = diagnostic.Location.SourceSpan;
 
-            var tokens = root.FindToken(diagnosticSpan.Start)
-                .Parent.AncestorsAndSelf();
+            var tokens = root.FindToken(diagnosticSpan.Start).Parent?.AncestorsAndSelf();
 
-            var creation = tokens.OfType<ExpressionStatementSyntax>()
-                .FirstOrDefault();
+            var creation = tokens?.Where(x => x is ExpressionStatementSyntax || x is LocalDeclarationStatementSyntax).FirstOrDefault();
+
+            if (creation == null)
+                return;
 
             // Register a code action that will invoke the fix.
-            context.RegisterCodeFix(CodeAction.Create("Make mock", c => MakeMock(context.Document, creation, c), "MockItTool"), diagnostic);
+            context.RegisterCodeFix(CodeAction.Create("Fill with mocks", c => FillWithMocks(context, creation, c), "MockItTool"), diagnostic);
         }
 
-        private static string GetTypeNameFromType(ISymbol symbol)
-        {
-            return symbol.GetSimpleTypeName();
-        }
-
-        private static async Task<Document> MakeMock(Document document, ExpressionStatementSyntax creation,
+        private static async Task<Document> FillWithMocks(CodeFixContext context, SyntaxNode objectCreationNode,
             CancellationToken cancellationToken)
         {
-            var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
+            Document document = context.Document;
 
-            var creationExpressionSyntax = creation.Expression.ChildNodes().OfType<ObjectCreationExpressionSyntax>().First();
+            var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
+            var creationExpressionSyntax = objectCreationNode.DescendantNodes().OfType<ObjectCreationExpressionSyntax>().FirstOrDefault();
+
+            if (creationExpressionSyntax == null)
+                return document;
 
             var symbolInfo = semanticModel.GetSymbolInfo(creationExpressionSyntax);
 
-            var invokedSymbol = (IMethodSymbol)symbolInfo.CandidateSymbols.FirstOrDefault(x => x is IMethodSymbol
-                                                                                               /*&& ((IMethodSymbol)x).Parameters.All(y => y.Type.IsAbstract)*/);
+            var invokedSymbol = symbolInfo.CandidateSymbols.OfType<IMethodSymbol>().FirstOrDefault();
+
+            if ((invokedSymbol?.Parameters.Length ?? 0) == 0)
+                return document;
 
             var constructorParameters = invokedSymbol.Parameters.Select(x => new ConstructorParameters
             {
                 ArgumentName = x.Name,
-                TypeName = GetTypeNameFromType((INamedTypeSymbol)x.Type)
+                TypeName = x.Type.GetSimpleTypeName()
             }).ToArray();
 
-            var changes = constructorParameters.MakeConstructorInjections();
+            var creationContextProperty = context.Diagnostics.FirstOrDefault()?.Properties.GetValueOrDefault("ContextType");
 
-            var changedDocument = await ChangesMaker.ApplyConstuctorInjections(document, creation, cancellationToken, changes, creationExpressionSyntax);
-            return changedDocument;
+            if (!Enum.TryParse(creationContextProperty, out SutCreationContextType creationContext))
+            {
+                creationContext = SutCreationContextType.Constructor;
+            }
+
+            string variableNameTemplate = context.Diagnostics.FirstOrDefault()?.Properties.GetValueOrDefault("VariableNameTemplate") ?? "mock{0}";
+            string fieldNameTemplate = context.Diagnostics.FirstOrDefault()?.Properties.GetValueOrDefault("FieldNameTemplate") ?? "_mock{0}";
+            var nameGenerator = new NameGenerator(variableNameTemplate, fieldNameTemplate);
+
+            var constructorInjections = MockSyntaxGenerator.GetConstructorInjections(constructorParameters, creationContext, nameGenerator);
+
+            var editor = await DocumentEditor.CreateAsync(document, cancellationToken).ConfigureAwait(false);
+
+            editor.ApplyConstructorInjections(objectCreationNode, constructorInjections, creationExpressionSyntax, creationContext);
+
+            return editor.GetChangedDocument();
         }
     }
 }

@@ -1,0 +1,5 @@
+﻿[*.cs]
+
+# MockItInitializer: Can be mocked
+dotnet_diagnostic.MockItInitializer.mock_variable_name_template = {0}Mock
+dotnet_diagnostic.MockItInitializer.mock_field_name_template = _{0}Mock
