@@ -69,9 +69,14 @@ namespace MockIt.Syntax
             return Argument(owner);
         }
 
-        public static ObjectCreationExpressionSyntax AsObjectCreationExpressionWithoutArguments(this TypeSyntax typeSyntax)
+        public static ObjectCreationExpressionSyntax AsObjectCreationExpression(this TypeSyntax typeSyntax)
         {
-            return ObjectCreationExpression(typeSyntax).WithArgumentList(ArgumentList());
+            return ObjectCreationExpression(typeSyntax);
+        }
+
+        public static ObjectCreationExpressionSyntax WithoutArguments(this ObjectCreationExpressionSyntax expression)
+        {
+            return expression.WithArgumentList(ArgumentList());
         }
 
         public static ExpressionStatementSyntax AsExpressionStatement(this ExpressionSyntax expressionSyntax)

@@ -34,35 +34,33 @@ namespace MockIt.Syntax
             return setups;
         }
 
-        private static IReadOnlyCollection<ExpressionSyntax> GetSetups(string identifier, FieldOrLocalVariables fieldOrLocalVariables, FieldOrLocalVariableSetups fieldOrLocalVariableSetups, bool withCallBack)
+        private static IEnumerable<ExpressionSyntax> GetSetups(string identifier, FieldOrLocalVariables fieldOrLocalVariables, FieldOrLocalVariableSetups fieldOrLocalVariableSetups, bool withCallBack)
         {
             if (fieldOrLocalVariables.MethodOrPropertySymbol is IMethodSymbol methodSymbol)
             {
                 var setupExpression = ComposeSetupExpression(identifier, fieldOrLocalVariableSetups, withCallBack, methodSymbol);
 
-                return new[] { setupExpression };
+                yield return setupExpression;
+                yield break;
             }
 
             var propertySymbol = (IPropertySymbol)fieldOrLocalVariables.MethodOrPropertySymbol;
 
-            var expressions = new List<ExpressionSyntax>();
             var defaultType = SyntaxFactory.DefaultExpression(SyntaxHelper.GetTypeSyntax(GetReplacedType(propertySymbol.Type, fieldOrLocalVariableSetups.Substitutions, fieldOrLocalVariableSetups.SutSubstitutions)));
 
             if (!propertySymbol.IsWriteOnly && !fieldOrLocalVariables.Expression.IsLeftSideOfAssignExpression())
             {
                 var getExpression = ComposeSetupGetExpression(identifier, propertySymbol, defaultType);
 
-                expressions.Add(getExpression);
+                yield return getExpression;
             }
 
             if (propertySymbol.IsReadOnly || !fieldOrLocalVariables.Expression.IsLeftSideOfAssignExpression())
-                return expressions;
+                yield break;
 
             var setExpression = ComposeSetupSetExpression(identifier, defaultType);
 
-            expressions.Add(setExpression);
-
-            return expressions;
+            yield return setExpression;
         }
 
         private static ExpressionSyntax ComposeSetupExpression(string identifier, FieldOrLocalVariableSetups fieldsSetups, bool withCallBack, IMethodSymbol methodSymbol)
@@ -252,7 +250,8 @@ namespace MockIt.Syntax
                                                  .SimpleAssignTo(SyntaxFactory.Identifier("Mock")
                                                                               .AsGeneric()
                                                                               .WithTypeArgument(x.TypeName)
-                                                                              .AsObjectCreationExpressionWithoutArguments())
+                                                                              .AsObjectCreationExpression()
+                                                                              .WithoutArguments())
                                                  .AsExpressionStatement(),
 
                     CreationArgument = SyntaxFactory.IdentifierName(x.FieldName)
@@ -277,7 +276,8 @@ namespace MockIt.Syntax
                                                                                SyntaxFactory.Identifier("Mock")
                                                                                             .AsGeneric()
                                                                                             .WithTypeArgument(x.TypeName)
-                                                                                            .AsObjectCreationExpressionWithoutArguments())))
+                                                                                            .AsObjectCreationExpression()
+                                                                                            .WithoutArguments())))
                                             .AsLocalDeclarationStatement(),
 
                 CreationArgument = SyntaxFactory.IdentifierName(x.VariableName)

@@ -114,7 +114,7 @@ namespace MockIt.Test
                     public void TestMethod1()
                     {
             subServiceMock.Setup(x => x.DoSubSomething(It.IsAny<int>()))
-            .Callback<int>(doInt => { });
+                .Callback<int>(doInt => { });
 
             sut.DoSomething(2);
 
@@ -306,8 +306,8 @@ namespace MockIt.Test
                     public void TestMethod1()
                     {
             _subServiceMock.Setup(x => x.DoSubSomething(It.IsAny<int>()))
-            .Callback<int>(doInt => { })
-            .ReturnsAsync(default(bool));
+                .Callback<int>(doInt => { })
+                .ReturnsAsync(default(bool));
 
             _sut.DoSomething(2);
 
@@ -433,8 +433,8 @@ namespace MockIt.Test
                         var subServiceMock = new Mock<ISubService>();
                         var sut = new Service(subServiceMock.Object);
             subServiceMock.Setup(x => x.DoSubSomething(It.IsAny<int>()))
-            .Callback<int>(doInt => { })
-            .ReturnsAsync(default(bool));
+                .Callback<int>(doInt => { })
+                .ReturnsAsync(default(bool));
 
             sut.DoSomething(2);
 
@@ -560,8 +560,8 @@ namespace MockIt.Test
                         var subServiceMock = new Mock<ISubService>();
                         var sut = new Service(subServiceMock.Object);
             subServiceMock.Setup(x => x.DoSubSomething(It.IsAny<int>()))
-            .Callback<int>(doInt => { })
-            .ReturnsAsync(default(bool));
+                .Callback<int>(doInt => { })
+                .ReturnsAsync(default(bool));
 
             sut.DoSomething(2);
 
