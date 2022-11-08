@@ -22,7 +22,7 @@ Choose "**Fill with mocks**" - it will create the mocks required for your servic
 
 Create **TestMethod** (**Test** for NUnit) marked method and write here a call of any methods of your SUT.
 
-If SUT's method uses any of injected instances Visual Studio shows your code analysis info.
+If SUT's method uses any of injected instances Visual Studio shows you code analysis info.
 
 Choose "**Setup mocks with callbacks**" or "**Setup mocks**" - it will setup the mock's methods and calls VerifyAll for each of them.
 
