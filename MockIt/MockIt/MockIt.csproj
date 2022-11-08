@@ -34,11 +34,6 @@
     <RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="ConsoleApplication2\**" />
-    <EmbeddedResource Remove="ConsoleApplication2\**" />
-    <None Remove="ConsoleApplication2\**" />
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.3.0" />
   </ItemGroup>
