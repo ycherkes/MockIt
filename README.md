@@ -5,7 +5,9 @@
 # MockIt
 
 [![marketplace](https://img.shields.io/visual-studio-marketplace/v/YevhenCherkes.MockIt.svg?label=Marketplace&style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=YevhenCherkes.MockIt)
-[![downloads](https://img.shields.io/visual-studio-marketplace/d/YevhenCherkes.MockIt?label=Downloads&style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=YevhenCherkes.MockIt)
+[![marktplace downloads](https://img.shields.io/visual-studio-marketplace/d/YevhenCherkes.MockIt?label=MaketPlace%20Downloads&style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=YevhenCherkes.MockIt)
+[![nuget downloads](https://img.shields.io/nuget/dt/MockIt?label=NuGet%20Downloads&style=for-the-badge)](https://www.nuget.org/packages/MockIt)
+
 [![License: Apache 2.0](https://img.shields.io/github/license/ycherkes/MockIt?style=for-the-badge)](https://github.com/ycherkes/MockIt/blob/master/LICENSE.txt)
 
 A Visual Studio extension that provides a Diagnostic Analyzer and CodeFix Provider to automate mocks creating and configuring.
