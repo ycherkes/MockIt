@@ -10,9 +10,15 @@
 
 [![License: Apache 2.0](https://img.shields.io/github/license/ycherkes/MockIt?style=for-the-badge)](https://github.com/ycherkes/MockIt/blob/master/LICENSE.txt)
 
-A Visual Studio extension that provides a Diagnostic Analyzer and CodeFix Provider to automate mocks creating and configuring.
+A Diagnostic Analyzer and CodeFix Provider aimed to automate mocks creating and configuring.
 
-How to use it:
+You can use it as a [Visual Studio Extension](https://marketplace.visualstudio.com/items?itemName=YevhenCherkes.MockIt) or install as a [NuGet package](https://www.nuget.org/packages/MockIt).
+
+For Visual Studio Code you should install a [NuGet package](https://www.nuget.org/packages/MockIt) and enable [Roslyn Analyzers](https://www.strathweb.com/2019/04/roslyn-analyzers-in-code-fixes-in-omnisharp-and-vs-code/), see [Example project](https://github.com/ycherkes/MockIt/tree/master/MockIt/Example).
+
+Additionally, you can [configure variable and field name templates](https://github.com/ycherkes/MockIt/blob/master/MockIt/Example/.editorconfig#L4).
+
+**Quick introduction**:
 
 In the **Constructor** or **TestInitialize** (**SetUp** for NUnit) marked method create the instance of your **Service Under the Test** (SUT).
 
