@@ -5,12 +5,20 @@
 # MockIt
 
 [![marketplace](https://img.shields.io/visual-studio-marketplace/v/YevhenCherkes.MockIt.svg?label=Marketplace&style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=YevhenCherkes.MockIt)
-[![downloads](https://img.shields.io/visual-studio-marketplace/d/YevhenCherkes.MockIt?label=Downloads&style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=YevhenCherkes.MockIt)
+[![marketplace downloads](https://img.shields.io/visual-studio-marketplace/d/YevhenCherkes.MockIt?label=MarketPlace%20Downloads&style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=YevhenCherkes.MockIt)
+[![nuget downloads](https://img.shields.io/nuget/dt/MockIt?label=NuGet%20Downloads&style=for-the-badge)](https://www.nuget.org/packages/MockIt)
+
 [![License: Apache 2.0](https://img.shields.io/github/license/ycherkes/MockIt?style=for-the-badge)](https://github.com/ycherkes/MockIt/blob/master/LICENSE.txt)
 
-A Visual Studio extension that provides a Diagnostic Analyzer and CodeFix Provider to automate mocks creating and configuring.
+A Diagnostic Analyzer and CodeFix Provider aimed to automate mocks creating and configuring.
 
-How to use it:
+You can use it as a [Visual Studio Extension](https://marketplace.visualstudio.com/items?itemName=YevhenCherkes.MockIt) or install as a [NuGet package](https://www.nuget.org/packages/MockIt).
+
+For Visual Studio Code you should install a [NuGet package](https://www.nuget.org/packages/MockIt) and enable [Roslyn Analyzers](https://www.strathweb.com/2019/04/roslyn-analyzers-in-code-fixes-in-omnisharp-and-vs-code/), see [Example project](https://github.com/ycherkes/MockIt/tree/master/MockIt/Example).
+
+Additionally, you can [configure variable and field name templates](https://github.com/ycherkes/MockIt/blob/master/MockIt/Example/.editorconfig#L4).
+
+**Quick introduction**:
 
 In the **Constructor** or **TestInitialize** (**SetUp** for NUnit) marked method create the instance of your **Service Under the Test** (SUT).
 
@@ -32,7 +40,7 @@ After that change all **default(type)** expressions to values you want.
 
 This tool has been working well for my own personal needs, but outside that its future depends on your feedback. Feel free to [open an issue](https://github.com/ycherkes/MockIt/issues).
 
-[![PayPal](https://img.shields.io/badge/Donate-PayPal-ffd700.svg?labelColor=0057b7&style=for-the-badge)](https://www.paypal.com/donate/?business=KXGF7CMW8Y8WJ&no_recurring=0&item_name=Help+Object+Dumper+become+better%21)
+[![PayPal](https://img.shields.io/badge/Donate-PayPal-ffd700.svg?labelColor=0057b7&style=for-the-badge)](https://www.paypal.com/donate/?business=KXGF7CMW8Y8WJ&no_recurring=0&item_name=Help+MockIt+library+become+better.&currency_code=USD)
 
 Any donations during this time will be directed to local charities at my own discretion.
 
