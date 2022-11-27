@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.Editing;
 using Microsoft.CodeAnalysis.Formatting;
 using MockIt.Model;
 using MockIt.Syntax;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -27,11 +28,11 @@ namespace MockIt
             }
 
             editor.InsertBefore(objectCreationNode, constructorInjections.Select(x => x.NewExpression.WithAdditionalAnnotations(Formatter.Annotation)));
-            editor.ReplaceNode(creationExpressionSyntax.ArgumentList, arguments.AsArgumentList());
+            editor.ReplaceNode(creationExpressionSyntax.ArgumentList ?? throw new InvalidOperationException("This is impossible."), arguments.AsArgumentList());
         }
 
-        public static void ApplyMethodCodeFixChanges(this SyntaxNode invocationSyntax,
-            SyntaxEditor editor,
+        public static void ApplyMethodCodeFixChanges(this SyntaxEditor editor,
+            SyntaxNode invocationSyntax,
             IReadOnlyCollection<FieldOrLocalVariables> invokedMethodsOfMocks, bool withCallBack)
         {
             var setups = MockSyntaxGenerator.GetSetups(invokedMethodsOfMocks, withCallBack);
