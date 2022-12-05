@@ -22,7 +22,7 @@ Additionally, you can [configure variable and field name templates](https://gith
 
 In the **Constructor** or **TestInitialize** (**SetUp** for NUnit) marked method create the instance of your **Service Under the Test** (SUT).
 
-After that you can see code analysis error and the next suggestions (lightbulbs):
+After that you can see code analysis error and the following suggestions (lightbulbs):
  - to create a constructor without parameters
  - to fill with mocks
 	
