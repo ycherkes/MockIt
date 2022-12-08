@@ -8,10 +8,10 @@
   </PropertyGroup>
   <PropertyGroup>
     <PackageId>MockIt</PackageId>
-    <PackageVersion>2.0.0.0</PackageVersion>
+    <PackageVersion>2.0.1.0</PackageVersion>
     <Authors>Yevhen Cherkes</Authors>
 	<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <PackageProjectUrl>http://www.apache.org/licenses/LICENSE-2.0</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/ycherkes/MockIt</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ycherkes/MockIt</RepositoryUrl>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Description>
@@ -19,34 +19,32 @@
     Also available via Visual Studio marketplace https://marketplace.visualstudio.com/items?itemName=YevhenCherkes.MockIt.
     Don't forget to reload Visual Studio instance after the plugin installation.
     </Description>
-    <PackageReleaseNotes>Summary of changes made in this release of the package.</PackageReleaseNotes>
+    <PackageReleaseNotes>Fixed Visual Studio 2019 suport.</PackageReleaseNotes>
     <Copyright>Yevhen Cherkes</Copyright>
     <PackageTags>Code generation, NUnit, MSTest, Mock, Auto Mocking</PackageTags>
     <DevelopmentDependency>true</DevelopmentDependency>
     <NoPackageAnalysis>true</NoPackageAnalysis>
-
-    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_AddAnalyzersToOutput</TargetsForTfmSpecificContentInPackage>
-
-    <Title>MockIt</Title>
+	<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_AddAnalyzersToOutput</TargetsForTfmSpecificContentInPackage>
+	<Title>MockIt</Title>
 	<PackageIcon>CombatMosquito.png</PackageIcon>
-	<AssemblyVersion>2.0.0.0</AssemblyVersion>
-	<FileVersion>2.0.0.0</FileVersion>
+	<AssemblyVersion>2.0.1.0</AssemblyVersion>
+	<FileVersion>2.0.1.0</FileVersion>
     <RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
+	<PackageReadmeFile>README.md</PackageReadmeFile>	  
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.3.0" />
+	<ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.11.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.11.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="tools\*.ps1" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="" />
-    <None Include="..\MockIt.Vsix\CombatMosquito.png">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-    <None Include="ReadMe.txt" />
+	<None Include="..\MockIt.Vsix\CombatMosquito.png">
+	  <Pack>True</Pack>
+	  <PackagePath>\</PackagePath>
+	</None>
+	<None Include=".\README.md" Pack="true" PackagePath="\"/>
   </ItemGroup>
-
-  <Target Name="_AddAnalyzersToOutput">
+	<Target Name="_AddAnalyzersToOutput">
     <ItemGroup>
       <TfmSpecificPackageFile Include="$(OutputPath)\MockIt.dll" PackagePath="analyzers/dotnet/cs" />
     </ItemGroup>
