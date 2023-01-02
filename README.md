@@ -20,7 +20,7 @@ Additionally, you can [configure variable and field name templates](https://gith
 
 **Quick introduction**:
 
-In the **Constructor** or **TestInitialize** (**SetUp** for NUnit) marked method create the instance of your **Service Under the Test** (SUT).
+Create the instance of your **Service Under the Test** (SUT) In the **Constructor** or **TestInitialize** (**SetUp** for NUnit) marked method.
 
 After that you can see code analysis error and the following suggestions (lightbulbs):
  - to create a constructor without parameters
@@ -28,7 +28,7 @@ After that you can see code analysis error and the following suggestions (lightb
 	
 Choose "**Fill with mocks**" - it will create the mocks required for your service and put them into constructor.
 
-Create **TestMethod** (**Test** for NUnit) marked method and write here a call of any methods of your SUT.
+Create **TestMethod** (**Test** for NUnit, **Fact** or **Theory** for xUnit) marked method and write here a call of any methods of your SUT.
 
 If SUT's method uses any of injected instances Visual Studio shows you code analysis info.
 
