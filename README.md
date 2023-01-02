@@ -20,7 +20,7 @@ Additionally, you can [configure variable and field name templates](https://gith
 
 **Quick introduction**:
 
-Create the instance of your **Service Under the Test** (SUT) In the **Constructor** or **TestInitialize** (**SetUp** for NUnit) marked method.
+Create the instance of your **Service Under the Test** (SUT) in the **Constructor** or **TestInitialize** (**SetUp** for NUnit) marked method.
 
 After that you can see code analysis error and the following suggestions (lightbulbs):
  - to create a constructor without parameters
