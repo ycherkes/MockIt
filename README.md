@@ -1,3 +1,6 @@
+**I recommend using [Unitverse C# Unit Test Generator](https://github.com/mattwhitfield/Unitverse) Visual Studio extension as it supports Mock and NSubstitute and generates full test classes.**
+
+
 # [![Made in Ukraine](https://img.shields.io/badge/made_in-ukraine-ffd700.svg?labelColor=0057b7&style=for-the-badge)](https://stand-with-ukraine.pp.ua) [Stand with the people of Ukraine: How to Help](https://stand-with-ukraine.pp.ua)
 
 <img src="https://yevhencherkes.gallerycdn.vsassets.io/extensions/yevhencherkes/mockit/2.0.0.0/1667833072887/Microsoft.VisualStudio.Services.Icons.Default" width="100" height="100" />
